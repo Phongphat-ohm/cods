@@ -20,7 +20,7 @@ class SignatoryRoleManagerDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("ระบบจัดการบทบาทผู้มาศาล (Quick Add) - JADS")
+        self.setWindowTitle("ระบบจัดการบทบาทผู้มาศาล (Quick Add) - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(720, 560)
         self.selected_role_id: Optional[int] = None

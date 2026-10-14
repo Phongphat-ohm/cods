@@ -146,7 +146,7 @@ class DocTypeSelectDialog(QDialog):
     """
     def __init__(self, filename: str = "", count: int = 0, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("เลือกประเภทเอกสารที่ต้องการจัดทำ - JADS")
+        self.setWindowTitle("เลือกประเภทเอกสารที่ต้องการจัดทำ - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(760, 520)
         self.selected_type: Optional[str] = None

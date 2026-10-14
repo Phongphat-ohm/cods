@@ -19,7 +19,7 @@ class SaveTemplateModal(QDialog):
 
     def __init__(self, content: str, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("บันทึกเป็น Template ส่วนตัว - JADS")
+        self.setWindowTitle("บันทึกเป็น Template ส่วนตัว - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(560, 480)
         self.content = content

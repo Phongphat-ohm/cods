@@ -18,7 +18,7 @@ class BenchManagerDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("ระบบจัดการองค์คณะผู้พิพากษา (Bench Pairing) - JADS")
+        self.setWindowTitle("ระบบจัดการองค์คณะผู้พิพากษา (Bench Pairing) - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(840, 580)
         self.selected_pair_id = None

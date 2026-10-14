@@ -1,5 +1,5 @@
 """
-JADS Icon Service - High Performance 100% Offline Vector SVG Icon Renderer
+CODS Icon Service - High Performance 100% Offline Vector SVG Icon Renderer
 Renders crisp vector SVG icons into PySide6 QPixmap and QIcon instances.
 Supports custom colors, sizes, and stroke widths with caching.
 """
@@ -139,6 +139,15 @@ SVG_PATHS: Dict[str, str] = {
         <path d="M9 18h6"></path>
         <path d="M10 22h4"></path>
         <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
+    """,
+    "help-circle": """
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    """,
+    "book-open": """
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
     """,
 }
 

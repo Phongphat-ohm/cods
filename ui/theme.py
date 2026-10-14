@@ -1,5 +1,5 @@
 """
-Theme and Styling Module for JADS (Judicial Automated Document System)
+Theme and Styling Module for CODS (Court Official Document System)
 Font: Kanit (Loaded natively for high legibility across all Windows displays)
 Official Imperial Amethyst & Judicial Purple Theme (Enterprise Court of Justice Standard)
 """
@@ -88,8 +88,8 @@ def get_application_stylesheet() -> str:
             padding-bottom: 2px;
         }
         #brandSubLabel {
-            font-size: 13px;
-            color: #334155;
+            font-size: 12px;
+            color: #475569;
             font-weight: 400;
         }
         #menuSectionTitle {

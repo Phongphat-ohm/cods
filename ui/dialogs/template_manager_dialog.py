@@ -22,7 +22,7 @@ class TemplateManagerDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("จัดการ Template ข้อความกระบวนพิจารณา - JADS")
+        self.setWindowTitle("จัดการ Template ข้อความกระบวนพิจารณา - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(980, 680)
         self.templates = storage_service.load_templates()
@@ -321,6 +321,11 @@ class TemplateManagerDialog(QDialog):
             self.list_widget.setCurrentRow(0)
         else:
             self.clear_form()
+            if not self.templates:
+                empty_item = QListWidgetItem("💡 ยังไม่มี Template ในระบบ\nพิมพ์ข้อมูลฝั่งขวาแล้วกด 'บันทึกเป็น Template ใหม่'")
+                empty_item.setFlags(Qt.ItemFlag.NoItemFlags)
+                empty_item.setForeground(Qt.GlobalColor.darkGray)
+                self.list_widget.addItem(empty_item)
 
     def on_order_changed(self):
         """Persist the new template order after an internal drag & drop."""

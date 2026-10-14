@@ -1,5 +1,5 @@
 """
-Central Constants for JADS (Judicial Automated Document System)
+Central Constants for CODS (Court Official Document System)
 Provides standardized court case types, attendee roles, and judicial sorting weights.
 """
 

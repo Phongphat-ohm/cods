@@ -1,5 +1,5 @@
 """
-JADS Excel Service - Robust Court Schedule Spreadsheet Ingestion
+CODS Excel Service - Robust Court Schedule Spreadsheet Ingestion
 Provides column heuristic mapping, date normalization, Buddhist era year conversions,
 and table extraction for judicial proceedings.
 100% Offline (Air-Gapped) - Zero external network interactions.

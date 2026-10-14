@@ -1,5 +1,5 @@
-# JADS Design System: Imperial Amethyst & Judicial Purple
-**Judicial Automated Document System (JADS)**  
+# CODS Design System: Imperial Amethyst & Judicial Purple
+**Court Official Document System (CODS)**  
 *Enterprise Design System & UI Specification Standard (Court of Justice Edition)*
 
 ---

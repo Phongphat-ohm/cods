@@ -1,5 +1,5 @@
 """
-JADS (Judicial Automated Document System) - Python Standalone 100% Offline
+CODS (Court Official Document System) - Python Standalone 100% Offline
 Modern Official Judicial Theme with Wizard Steps & Personal Templates
 Font: Kanit (Loaded natively for high legibility across all Windows displays)
 Pure Native Desktop GUI powered by PySide6 (Zero External Web Dependencies)
@@ -11,9 +11,9 @@ from typing import List, Dict, Any, Optional
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
-    QStackedWidget, QMessageBox, QDialog
+    QStackedWidget, QMessageBox, QDialog, QLabel, QPushButton
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QKeyEvent
 
 from constants import DEFAULT_CASE_TYPES
@@ -24,9 +24,11 @@ from dialogs import (
     TemplateManagerDialog, BenchManagerDialog, SignatoryRoleManagerDialog,
     CourtSettingsDialog, ShortcutsGuideDialog
 )
+from ui.dialogs.welcome_wizard_dialog import WelcomeWizardDialog
 from ui.theme import load_application_fonts, get_application_stylesheet, get_default_font
 from ui.components.sidebar import SidebarWidget
 from ui.components.shortcut_bar import ShortcutTipBar
+from ui.components.tutorial_overlay import TutorialOverlay, TutorialStep
 from ui.pages.menu_page import MenuPage
 from ui.pages.import_page import ImportPage
 from ui.pages.table_page import TablePage
@@ -34,12 +36,12 @@ from ui.pages.doc_type_page import DocTypePage
 from ui.pages.form_page import FormPage
 
 
-class JADSMainWindow(QMainWindow):
+class CODSMainWindow(QMainWindow):
     """Main Application Window orchestrating navigation, state, and pages."""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ระบบสร้างรายงานกระบวนพิจารณาคดี (JADS Offline)")
+        self.setWindowTitle("ระบบสร้างรายงานกระบวนพิจารณาคดี (CODS Offline)")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(1200, 840)
         self.setMinimumSize(960, 600)
@@ -59,6 +61,7 @@ class JADSMainWindow(QMainWindow):
         self.apply_theme()
         self.update_step_ui()
         self.showMaximized()
+        QTimer.singleShot(250, self.check_first_run_tutorial)
 
     def init_ui(self):
         main_widget = QWidget()
@@ -74,6 +77,7 @@ class JADSMainWindow(QMainWindow):
         self.sidebar.bench_manager_requested.connect(self.open_bench_manager)
         self.sidebar.signatory_roles_requested.connect(self.open_signatory_role_manager)
         self.sidebar.court_settings_requested.connect(self.open_court_settings)
+        self.sidebar.tutorial_requested.connect(self.open_tutorial_menu)
         main_layout.addWidget(self.sidebar)
 
         # 2. Central Content Area (Stacked Pages & Bottom Shortcut Bar)
@@ -90,6 +94,7 @@ class JADSMainWindow(QMainWindow):
         self.page_menu.start_requested.connect(lambda: self.go_to_step(1))
         self.page_menu.template_manager_requested.connect(self.open_template_manager)
         self.page_menu.bench_manager_requested.connect(self.open_bench_manager)
+        self.page_menu.signatory_roles_requested.connect(self.open_signatory_role_manager)
         self.page_menu.court_settings_requested.connect(self.open_court_settings)
         self.stacked_widget.addWidget(self.page_menu)
 
@@ -179,6 +184,10 @@ class JADSMainWindow(QMainWindow):
             self.page_table.focus_search()
         elif step_idx == 4:
             self.page_form.focus_first_field()
+
+        # Contextual feature onboarding / spotlight tutorial for this step
+        if 0 <= step_idx <= 4:
+            QTimer.singleShot(250, lambda s=step_idx: self.show_step_tutorial(s))
 
     def open_shortcuts_guide(self):
         """Open keyboard shortcuts reference dialog."""
@@ -537,13 +546,219 @@ class JADSMainWindow(QMainWindow):
             if hasattr(self.sidebar, 'refresh_court_badge'):
                 self.sidebar.refresh_court_badge(default_court)
 
+    def check_first_run_tutorial(self):
+        """Check if this is the user's first time launching CODS and prompt onboarding wizard."""
+        if not storage_service.is_tutorial_completed("welcome_wizard"):
+            self.open_welcome_wizard()
+        elif not storage_service.is_tutorial_completed("step_menu"):
+            self.show_step_tutorial(0)
+
+    def open_welcome_wizard(self):
+        """Launch the first-time welcome wizard dialog."""
+        dlg = WelcomeWizardDialog(self)
+        if dlg.exec():
+            court_name = storage_service.get_default_court_name()
+            if court_name:
+                self.handle_court_saved_as_default(court_name)
+            # After finishing welcome wizard, show menu spotlight tour if tutorials enabled
+            QTimer.singleShot(350, lambda: self.show_step_tutorial(0))
+
+    def show_step_tutorial(self, step_idx: int, force: bool = False):
+        """Display interactive spotlight tutorial for the given step if not completed or forced."""
+        key_map = {
+            0: ("step_menu", self.page_menu),
+            1: ("step_import", self.page_import),
+            2: ("step_table", self.page_table),
+            3: ("step_doctype", self.page_doc_type),
+            4: ("step_form", self.page_form),
+        }
+        if step_idx not in key_map:
+            return
+
+        tut_key, page = key_map[step_idx]
+        if not force and storage_service.is_tutorial_completed(tut_key):
+            return
+
+        if hasattr(page, "get_tutorial_steps"):
+            steps = list(page.get_tutorial_steps())
+            if step_idx == 0 and hasattr(self, 'sidebar') and hasattr(self.sidebar, 'tools_title'):
+                steps.append(TutorialStep(
+                    target=self.sidebar.tools_title,
+                    title="6. เมนูคลังข้อมูล & ตั้งค่าบน Sidebar (เข้าถึงได้ทุกหน้า)",
+                    description="ไม่ว่าท่านจะกำลังทำเอกสารอยู่ในขั้นตอนใด สามารถเปิดคลัง Template, คู่องค์คณะ, จัดการบทบาทผู้มาศาล หรือตั้งค่าศาลเริ่มต้นได้จากแถบเมนูด้านข้างนี้ตลอดเวลา",
+                    preferred_position="right"
+                ))
+            if steps:
+                # Close any existing overlay
+                for child in self.findChildren(TutorialOverlay):
+                    child.close_and_cleanup()
+                overlay = TutorialOverlay(self, tut_key, steps)
+                overlay.show()
+
+    def open_tutorial_menu(self):
+        """Modal menu for launching tutorials, resetting tours, or viewing shortcuts."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle("แนะนำการใช้งาน CODS")
+        dlg.setFixedWidth(460)
+        layout = QVBoxLayout(dlg)
+        layout.setContentsMargins(26, 22, 26, 22)
+        layout.setSpacing(14)
+
+        lbl_title = QLabel("ศูนย์แนะนำการใช้งาน (Tutorial & Help Center) - CODS", dlg)
+        lbl_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #1e1b4b;")
+        layout.addWidget(lbl_title)
+
+        lbl_desc = QLabel("เลือกรูปแบบการแนะนำการใช้งานที่ท่านต้องการ:", dlg)
+        lbl_desc.setStyleSheet("font-size: 13px; color: #64748b;")
+        layout.addWidget(lbl_desc)
+
+        btn_wizard = QPushButton("🌟 เริ่มทัวร์แนะนำโปรแกรม (Welcome Wizard)", dlg)
+        btn_wizard.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_wizard.setStyleSheet("""
+            QPushButton {
+                background-color: #faf5ff;
+                border: 1.5px solid #d8b4fe;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #581c87;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #f3e8ff;
+                border-color: #a855f7;
+            }
+        """)
+        btn_wizard.clicked.connect(lambda: (dlg.accept(), self.open_welcome_wizard()))
+        layout.addWidget(btn_wizard)
+
+        btn_library_tour = QPushButton("📚 แนะนำเมนูคลังข้อมูลและการตั้งค่า (Settings & Library Tour)", dlg)
+        btn_library_tour.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_library_tour.setStyleSheet("""
+            QPushButton {
+                background-color: #faf5ff;
+                border: 1.5px solid #d8b4fe;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #581c87;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #f3e8ff;
+                border-color: #a855f7;
+            }
+        """)
+        btn_library_tour.clicked.connect(lambda: (dlg.accept(), self.go_to_step(0), self.show_step_tutorial(0, force=True)))
+        layout.addWidget(btn_library_tour)
+
+        btn_spotlight = QPushButton("💡 เริ่มแนะนำหน้าจอปัจจุบัน (Spotlight Tour)", dlg)
+        btn_spotlight.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_spotlight.setStyleSheet("""
+            QPushButton {
+                background-color: #f8fafc;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1e293b;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #f1f5f9;
+                border-color: #94a3b8;
+            }
+        """)
+        btn_spotlight.clicked.connect(lambda: (dlg.accept(), self.show_step_tutorial(self.current_step, force=True)))
+        layout.addWidget(btn_spotlight)
+
+        btn_shortcuts = QPushButton("⌨️ คู่มือปุ่มลัดคีย์บอร์ดทั้งหมด (Shortcuts Guide)", dlg)
+        btn_shortcuts.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_shortcuts.setStyleSheet("""
+            QPushButton {
+                background-color: #f8fafc;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #1e293b;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #f1f5f9;
+                border-color: #94a3b8;
+            }
+        """)
+        btn_shortcuts.clicked.connect(lambda: (dlg.accept(), self.open_shortcuts_guide()))
+        layout.addWidget(btn_shortcuts)
+
+        btn_reset = QPushButton("🔄 รีเซ็ตการแนะนำทั้งหมด (เริ่มแสดงคำแนะนำใหม่ทุกหน้า)", dlg)
+        btn_reset.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_reset.setStyleSheet("""
+            QPushButton {
+                background-color: #fff1f2;
+                border: 1.5px solid #fecdd3;
+                border-radius: 8px;
+                padding: 12px 16px;
+                font-size: 13.5px;
+                font-weight: 600;
+                color: #b91c1c;
+                text-align: left;
+            }
+            QPushButton:hover {
+                background-color: #ffe4e6;
+                border-color: #f87171;
+            }
+        """)
+
+        def do_reset():
+            storage_service.reset_all_tutorials()
+            dlg.accept()
+            QMessageBox.information(
+                self,
+                "รีเซ็ตคำแนะนำสำเร็จ",
+                "ระบบได้รีเซ็ตสถานะคำแนะนำเรียบร้อยแล้ว\n"
+                "ระบบจะแสดงการแนะนำแบบส่องไฟ (Spotlight) ให้ใหม่เมื่อท่านเข้าสู่แต่ละหน้าจอ"
+            )
+
+        btn_reset.clicked.connect(do_reset)
+        layout.addWidget(btn_reset)
+
+        btn_close = QPushButton("ปิด", dlg)
+        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_close.setStyleSheet("""
+            QPushButton {
+                background-color: #e2e8f0;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 16px;
+                font-size: 13px;
+                font-weight: bold;
+                color: #475569;
+            }
+            QPushButton:hover {
+                background-color: #cbd5e1;
+            }
+        """)
+        btn_close.clicked.connect(dlg.reject)
+        layout.addWidget(btn_close)
+
+        dlg.exec()
+
+
+JADSMainWindow = CODSMainWindow
+
 
 def main():
     # Set Windows Taskbar AppUserModelID so taskbar displays the custom logo
     if sys.platform == "win32":
         try:
             import ctypes
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("coj.jads.desktop.app")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("coj.cods.desktop.app")
         except Exception:
             pass
 
@@ -554,7 +769,7 @@ def main():
     load_application_fonts()
     app.setFont(get_default_font(11))
 
-    window = JADSMainWindow()
+    window = CODSMainWindow()
     window.show()
     sys.exit(app.exec())
 

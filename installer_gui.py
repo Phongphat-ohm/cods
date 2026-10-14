@@ -1,6 +1,6 @@
 """
-JADS GUI Installation Wizard
-Standalone Graphical Installer for Judicial Automated Document System (JADS)
+CODS GUI Installation Wizard
+Standalone Graphical Installer for Court Official Document System (CODS)
 100% Offline & Air-Gapped Windows GUI Installer built with PySide6
 """
 
@@ -61,11 +61,15 @@ class InstallWorker(QThread):
         try:
             os.makedirs(self.target_dir, exist_ok=True)
 
-            # 1. Locate zip payload
-            zip_path = get_resource_path("JADS_Portable_v1.0.zip")
+            # 1. Locate zip payload (CODS or JADS)
+            zip_path = get_resource_path("CODS_Portable_v1.0.zip")
+            if not os.path.exists(zip_path):
+                zip_path = get_resource_path("JADS_Portable_v1.0.zip")
             if not os.path.exists(zip_path):
                 # Fallback to local directory
-                cwd_zip = os.path.join(os.getcwd(), "JADS_Portable_v1.0.zip")
+                cwd_zip = os.path.join(os.getcwd(), "CODS_Portable_v1.0.zip")
+                if not os.path.exists(cwd_zip):
+                    cwd_zip = os.path.join(os.getcwd(), "JADS_Portable_v1.0.zip")
                 if os.path.exists(cwd_zip):
                     zip_path = cwd_zip
 
@@ -80,12 +84,14 @@ class InstallWorker(QThread):
                         short_name = os.path.basename(member.filename) or member.filename
                         self.progress_updated.emit(pct, f"กำลังคัดลอก: {short_name}")
             else:
-                # If zip not found, look for dist/JADS
-                dist_jads = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "JADS")
-                if os.path.exists(dist_jads):
-                    self.progress_updated.emit(20, "กำลังคัดลอกไฟล์จาก dist/JADS...")
-                    for root, dirs, files in os.walk(dist_jads):
-                        rel_root = os.path.relpath(root, dist_jads)
+                # If zip not found, look for dist/CODS or dist/JADS
+                dist_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "CODS")
+                if not os.path.exists(dist_dir):
+                    dist_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist", "JADS")
+                if os.path.exists(dist_dir):
+                    self.progress_updated.emit(20, "กำลังคัดลอกไฟล์จาก dist...")
+                    for root, dirs, files in os.walk(dist_dir):
+                        rel_root = os.path.relpath(root, dist_dir)
                         dest_root = os.path.join(self.target_dir, rel_root) if rel_root != "." else self.target_dir
                         os.makedirs(dest_root, exist_ok=True)
                         for f in files:
@@ -93,7 +99,7 @@ class InstallWorker(QThread):
                             dst_f = os.path.join(dest_root, f)
                             shutil.copy2(src_f, dst_f)
                 else:
-                    self.install_finished.emit(False, "ไม่พบไฟล์แพ็กเกจ JADS_Portable_v1.0.zip สำหรับติดตั้ง")
+                    self.install_finished.emit(False, "ไม่พบไฟล์แพ็กเกจสำหรับการติดตั้ง (CODS_Portable_v1.0.zip)")
                     return
 
             self.progress_updated.emit(85, "กำลังสร้างตัวถอนการติดตั้ง (Uninstaller)...")
@@ -111,17 +117,19 @@ class InstallWorker(QThread):
     def create_uninstaller(self):
         """Create clean uninstall.bat script in target directory."""
         uninstaller_content = f"""@echo off
-title JADS - ถอนการติดตั้งโปรแกรม
+title CODS - ถอนการติดตั้งโปรแกรม
 chcp 65001 >nul
 echo ======================================================================
-echo    คุณกำลังจะถอนการติดตั้ง JADS ออกจากคอมพิวเตอร์
+echo    คุณกำลังจะถอนการติดตั้ง CODS ออกจากคอมพิวเตอร์
 echo ======================================================================
 echo.
 set /p CONFIRM="ยืนยันการถอนการติดตั้งหรือไม่? (Y/N): "
 if /i "%CONFIRM%" neq "Y" exit /b 0
 
 echo กำลังลบ Shortcut บน Desktop และ Start Menu...
+if exist "%USERPROFILE%\\Desktop\\CODS.lnk" del /f /q "%USERPROFILE%\\Desktop\\CODS.lnk"
 if exist "%USERPROFILE%\\Desktop\\JADS.lnk" del /f /q "%USERPROFILE%\\Desktop\\JADS.lnk"
+if exist "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\CODS" rd /s /q "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\CODS"
 if exist "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\JADS" rd /s /q "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\JADS"
 
 echo.
@@ -132,7 +140,7 @@ if /i "%DELDATA%"=="Y" (
 
 echo กำลังลบไฟล์โปรแกรม...
 start "" cmd /c "timeout /t 1 /nobreak >nul & rd /s /q \"{self.target_dir}\""
-echo ถอนการติดตั้ง JADS เรียบร้อยแล้ว
+echo ถอนการติดตั้ง CODS เรียบร้อยแล้ว
 pause
 """
         uninstaller_path = os.path.join(self.target_dir, "uninstall.bat")
@@ -141,7 +149,12 @@ pause
 
     def create_shortcuts(self):
         """Create Windows desktop and start menu shortcuts via PowerShell."""
-        exe_path = os.path.join(self.target_dir, "JADS.exe")
+        exe_path = os.path.join(self.target_dir, "CODS.exe")
+        if not os.path.exists(exe_path):
+            alt_exe = os.path.join(self.target_dir, "JADS.exe")
+            if os.path.exists(alt_exe):
+                exe_path = alt_exe
+
         icon_path = os.path.join(self.target_dir, "logo.ico")
         un_path = os.path.join(self.target_dir, "uninstall.bat")
 
@@ -151,29 +164,29 @@ pause
         if self.create_desktop:
             ps_script.append(f"""
             $desktop = [Environment]::GetFolderPath('Desktop');
-            $scDesktop = $wsh.CreateShortcut((Join-Path $desktop 'JADS.lnk'));
+            $scDesktop = $wsh.CreateShortcut((Join-Path $desktop 'CODS.lnk'));
             $scDesktop.TargetPath = '{exe_path}';
             $scDesktop.WorkingDirectory = '{self.target_dir}';
             $scDesktop.IconLocation = '{icon_path},0';
-            $scDesktop.Description = 'ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม (JADS)';
+            $scDesktop.Description = 'ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม (CODS)';
             $scDesktop.Save();
             """)
 
         if self.create_startmenu:
             ps_script.append(f"""
             $startPrograms = [Environment]::GetFolderPath('Programs');
-            $menuFolder = Join-Path $startPrograms 'JADS';
+            $menuFolder = Join-Path $startPrograms 'CODS';
             if (!(Test-Path $menuFolder)) {{ New-Item -ItemType Directory -Path $menuFolder -Force | Out-Null }};
-            $scStart = $wsh.CreateShortcut((Join-Path $menuFolder 'JADS.lnk'));
+            $scStart = $wsh.CreateShortcut((Join-Path $menuFolder 'CODS.lnk'));
             $scStart.TargetPath = '{exe_path}';
             $scStart.WorkingDirectory = '{self.target_dir}';
             $scStart.IconLocation = '{icon_path},0';
-            $scStart.Description = 'ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม (JADS)';
+            $scStart.Description = 'ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม (CODS)';
             $scStart.Save();
-            $scUn = $wsh.CreateShortcut((Join-Path $menuFolder 'Uninstall JADS.lnk'));
+            $scUn = $wsh.CreateShortcut((Join-Path $menuFolder 'Uninstall CODS.lnk'));
             $scUn.TargetPath = '{un_path}';
             $scUn.WorkingDirectory = '{self.target_dir}';
-            $scUn.Description = 'ถอนการติดตั้ง JADS';
+            $scUn.Description = 'ถอนการติดตั้ง CODS';
             $scUn.Save();
             """)
 
@@ -190,7 +203,7 @@ class InstallerWizardDialog(QDialog):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ติดตั้ง JADS - Judicial Automated Document System (v1.0)")
+        self.setWindowTitle("ติดตั้ง CODS - Court Official Document System (v1.0)")
         self.resize(680, 470)
         self.setMinimumSize(640, 440)
 
@@ -202,7 +215,7 @@ class InstallerWizardDialog(QDialog):
             self.setWindowIcon(QIcon(logo_path))
 
         default_appdata = os.environ.get("LOCALAPPDATA", os.path.expanduser("~"))
-        self.default_install_dir = os.path.join(default_appdata, "Programs", "JADS")
+        self.default_install_dir = os.path.join(default_appdata, "Programs", "CODS")
 
         self.worker: Optional[InstallWorker] = None
         self.init_ui()
@@ -340,9 +353,9 @@ class InstallerWizardDialog(QDialog):
         h_top.addWidget(logo_lbl)
 
         v_title = QVBoxLayout()
-        lbl_app = QLabel("ยินดีต้อนรับสู่การติดตั้ง JADS")
+        lbl_app = QLabel("ยินดีต้อนรับสู่การติดตั้ง CODS")
         lbl_app.setStyleSheet("font-size: 20px; font-weight: 700; color: #4c1d95;")
-        lbl_sub = QLabel("Judicial Automated Document System (v1.0.0)")
+        lbl_sub = QLabel("Court Official Document System (v1.0.0)")
         lbl_sub.setStyleSheet("font-size: 13.5px; color: #64748b; font-weight: 500;")
         v_title.addWidget(lbl_app)
         v_title.addWidget(lbl_sub)
@@ -436,7 +449,7 @@ class InstallerWizardDialog(QDialog):
         self.chk_desktop.setChecked(True)
         lay.addWidget(self.chk_desktop)
 
-        self.chk_startmenu = QCheckBox("สร้างทางลัดในเมนูเริ่มต้น (Start Menu -> JADS)")
+        self.chk_startmenu = QCheckBox("สร้างทางลัดในเมนูเริ่มต้น (Start Menu -> CODS)")
         self.chk_startmenu.setChecked(True)
         lay.addWidget(self.chk_startmenu)
 
@@ -452,7 +465,7 @@ class InstallerWizardDialog(QDialog):
         lay.setContentsMargins(32, 36, 32, 36)
         lay.setSpacing(16)
 
-        lbl_head = QLabel("กำลังติดตั้งโปรแกรม JADS...")
+        lbl_head = QLabel("กำลังติดตั้งโปรแกรม CODS...")
         lbl_head.setStyleSheet("font-size: 18px; font-weight: 700; color: #4c1d95;")
         lay.addWidget(lbl_head)
 
@@ -485,7 +498,7 @@ class InstallerWizardDialog(QDialog):
         lbl_head.setStyleSheet("font-size: 20px; font-weight: 700; color: #15803d;")
         lay.addWidget(lbl_head)
 
-        lbl_sub = QLabel("ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม (JADS) พร้อมใช้งานแล้ว")
+        lbl_sub = QLabel("ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม (CODS) พร้อมใช้งานแล้ว")
         lbl_sub.setStyleSheet("font-size: 14px; color: #334155; font-weight: 500;")
         lay.addWidget(lbl_sub)
 
@@ -511,7 +524,7 @@ class InstallerWizardDialog(QDialog):
         v_card.addWidget(lbl_info)
         lay.addWidget(card)
 
-        self.chk_launch = QCheckBox("เปิดใช้งานโปรแกรม JADS ทันที")
+        self.chk_launch = QCheckBox("เปิดใช้งานโปรแกรม CODS ทันที")
         self.chk_launch.setChecked(True)
         self.chk_launch.setStyleSheet("font-size: 14px; font-weight: 600; color: #4c1d95;")
         lay.addWidget(self.chk_launch)
@@ -525,7 +538,7 @@ class InstallerWizardDialog(QDialog):
     def browse_install_dir(self):
         dir_selected = QFileDialog.getExistingDirectory(self, "เลือกโฟลเดอร์ติดตั้ง", self.txt_path.text())
         if dir_selected:
-            final_dir = os.path.join(dir_selected, "JADS") if not dir_selected.endswith("JADS") else dir_selected
+            final_dir = os.path.join(dir_selected, "CODS") if not (dir_selected.endswith("CODS") or dir_selected.endswith("JADS")) else dir_selected
             self.txt_path.setText(final_dir)
             self.lbl_space.setText(self.get_disk_space_text(final_dir))
 
@@ -554,9 +567,14 @@ class InstallerWizardDialog(QDialog):
         elif curr == 3:
             # Finished Page -> Done
             if self.chk_launch.isChecked():
-                exe_path = os.path.join(self.txt_path.text().strip(), "JADS.exe")
+                target_base = self.txt_path.text().strip()
+                exe_path = os.path.join(target_base, "CODS.exe")
+                if not os.path.exists(exe_path):
+                    alt_exe = os.path.join(target_base, "JADS.exe")
+                    if os.path.exists(alt_exe):
+                        exe_path = alt_exe
                 if os.path.exists(exe_path):
-                    subprocess.Popen([exe_path], cwd=self.txt_path.text().strip())
+                    subprocess.Popen([exe_path], cwd=target_base)
             self.accept()
 
     def go_back(self):

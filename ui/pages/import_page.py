@@ -82,9 +82,9 @@ class ImportPage(QWidget):
         header_layout.addWidget(btn_back)
         layout.addLayout(header_layout)
 
-        upload_box = DragDropUploadFrame(self)
-        upload_box.file_dropped.connect(self.file_selected.emit)
-        box_layout = QVBoxLayout(upload_box)
+        self.upload_box = DragDropUploadFrame(self)
+        self.upload_box.file_dropped.connect(self.file_selected.emit)
+        box_layout = QVBoxLayout(self.upload_box)
         box_layout.setContentsMargins(40, 56, 40, 56)
         box_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         box_layout.setSpacing(18)
@@ -104,15 +104,33 @@ class ImportPage(QWidget):
         lbl_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         box_layout.addWidget(lbl_sub)
 
-        btn_browse = QPushButton("เลือกไฟล์ Excel จากคอมพิวเตอร์ (.xlsx)...")
-        btn_browse.setObjectName("primaryButtonLarge")
-        btn_browse.setIcon(get_icon("folder-open", color="#ffffff", size=20))
-        btn_browse.setToolTip("เลือกไฟล์จากคอมพิวเตอร์ [Ctrl+O]")
-        btn_browse.clicked.connect(self.handle_browse_file)
-        box_layout.addWidget(btn_browse, alignment=Qt.AlignmentFlag.AlignCenter)
+        self.btn_browse = QPushButton("เลือกไฟล์ Excel จากคอมพิวเตอร์ (.xlsx)...")
+        self.btn_browse.setObjectName("primaryButtonLarge")
+        self.btn_browse.setIcon(get_icon("folder-open", color="#ffffff", size=20))
+        self.btn_browse.setToolTip("เลือกไฟล์จากคอมพิวเตอร์ [Ctrl+O]")
+        self.btn_browse.clicked.connect(self.handle_browse_file)
+        box_layout.addWidget(self.btn_browse, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        layout.addWidget(upload_box)
+        layout.addWidget(self.upload_box)
         layout.addStretch()
+
+    def get_tutorial_steps(self):
+        """Return tutorial steps for Step 1."""
+        from ui.components.tutorial_overlay import TutorialStep
+        return [
+            TutorialStep(
+                target=self.upload_box,
+                title="พื้นที่ลากวางไฟล์บัญชีนัด (Drag & Drop)",
+                description="ท่านสามารถลากไฟล์ตารางนัด Excel (.xlsx หรือ .xls) จากหน้าต่างคอมพิวเตอร์มาปล่อยลงในกรอบนี้ได้ทันที",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.btn_browse,
+                title="ปุ่มเลือกไฟล์จากเครื่อง (Ctrl+O)",
+                description="หรือคลิกปุ่มนี้เพื่อค้นหาและเลือกไฟล์ Excel จากโฟลเดอร์ในเครื่อง ระบบจะประมวลผลภายในเครื่อง 100% ปลอดภัยตามมาตรฐานศาลยุติธรรม",
+                preferred_position="bottom"
+            )
+        ]
 
     def trigger_file_dialog(self):
         """Programmatically trigger file browse dialog via keyboard shortcut."""

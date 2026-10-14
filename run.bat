@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo Starting JADS Offline...
+echo Starting CODS Offline...
 python main.py
 if errorlevel 1 (
     echo.

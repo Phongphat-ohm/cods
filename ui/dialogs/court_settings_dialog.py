@@ -16,7 +16,7 @@ class CourtSettingsDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("ตั้งค่าชื่อศาลเริ่มต้น - JADS")
+        self.setWindowTitle("ตั้งค่าชื่อศาลเริ่มต้น - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(600, 400)
         self.init_ui()

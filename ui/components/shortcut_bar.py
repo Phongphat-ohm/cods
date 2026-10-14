@@ -1,5 +1,5 @@
 """
-Shortcut Tip Bar Component for JADS
+Shortcut Tip Bar Component for CODS
 Displays keyboard shortcuts cheatsheet at the bottom of the workspace.
 Assists court officers and clerks in operating the application rapidly via keyboard.
 100% Offline, Native PySide6 implementation. Zero emojis.

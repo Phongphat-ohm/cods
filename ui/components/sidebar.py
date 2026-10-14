@@ -1,5 +1,5 @@
 """
-Sidebar Navigation Component for JADS
+Sidebar Navigation Component for CODS
 Official, clean, and responsive navigation panel adhering to Court of Justice standards.
 """
 
@@ -19,11 +19,12 @@ class SidebarWidget(QFrame):
     bench_manager_requested = Signal()
     signatory_roles_requested = Signal()
     court_settings_requested = Signal()
+    tutorial_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("sidebarFrame")
-        self.setFixedWidth(270)
+        self.setFixedWidth(280)
         self.setStyleSheet("""
             #sidebarButton[active="true"] {
                 background-color: #f5f3ff;
@@ -53,30 +54,30 @@ class SidebarWidget(QFrame):
 
     def init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 24, 18, 22)
+        layout.setContentsMargins(14, 20, 14, 20)
         layout.setSpacing(10)
 
         # Brand Header with App Logo
         h_brand = QHBoxLayout()
-        h_brand.setSpacing(12)
+        h_brand.setSpacing(10)
         h_brand.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         brand_logo = QLabel()
-        brand_logo.setPixmap(get_app_logo_pixmap(size=44))
-        brand_logo.setFixedSize(44, 44)
+        brand_logo.setPixmap(get_app_logo_pixmap(size=40))
+        brand_logo.setFixedSize(40, 40)
         brand_logo.setScaledContents(True)
         h_brand.addWidget(brand_logo)
 
         v_brand_text = QVBoxLayout()
         v_brand_text.setSpacing(2)
-        brand_label = QLabel("ระบบงานศาล (JADS)")
+        brand_label = QLabel("ระบบงานศาล (CODS)")
         brand_label.setObjectName("brandLabel")
         brand_sub = QLabel("เครื่องมือช่วยงานธุรการศาลยุติธรรม")
         brand_sub.setObjectName("brandSubLabel")
+        brand_sub.setToolTip("เครื่องมือช่วยงานธุรการศาลยุติธรรม")
         v_brand_text.addWidget(brand_label)
         v_brand_text.addWidget(brand_sub)
-        h_brand.addLayout(v_brand_text)
-        h_brand.addStretch()
+        h_brand.addLayout(v_brand_text, 1)
 
         layout.addLayout(h_brand)
 
@@ -121,33 +122,39 @@ class SidebarWidget(QFrame):
         layout.addSpacing(10)
 
         # Section 2: คลังข้อมูล & ตั้งค่า
-        tools_title = QLabel("คลังข้อมูล & ตั้งค่า")
-        tools_title.setObjectName("menuSectionTitle")
-        layout.addWidget(tools_title)
+        self.tools_title = QLabel("คลังข้อมูล & ตั้งค่า")
+        self.tools_title.setObjectName("menuSectionTitle")
+        layout.addWidget(self.tools_title)
 
-        btn_nav_templates = QPushButton("คลัง Template ย่อหน้า")
-        btn_nav_templates.setObjectName("sidebarButton")
-        btn_nav_templates.setIcon(get_icon("clipboard-list", color="#4c1d95", size=18))
-        btn_nav_templates.clicked.connect(self.template_manager_requested.emit)
-        layout.addWidget(btn_nav_templates)
+        self.btn_nav_templates = QPushButton("คลัง Template ย่อหน้า")
+        self.btn_nav_templates.setObjectName("sidebarButton")
+        self.btn_nav_templates.setIcon(get_icon("clipboard-list", color="#4c1d95", size=18))
+        self.btn_nav_templates.clicked.connect(self.template_manager_requested.emit)
+        layout.addWidget(self.btn_nav_templates)
 
-        btn_nav_bench = QPushButton("คู่องค์คณะผู้พิพากษา")
-        btn_nav_bench.setObjectName("sidebarButton")
-        btn_nav_bench.setIcon(get_icon("users", color="#4c1d95", size=18))
-        btn_nav_bench.clicked.connect(self.bench_manager_requested.emit)
-        layout.addWidget(btn_nav_bench)
+        self.btn_nav_bench = QPushButton("คู่องค์คณะผู้พิพากษา")
+        self.btn_nav_bench.setObjectName("sidebarButton")
+        self.btn_nav_bench.setIcon(get_icon("users", color="#4c1d95", size=18))
+        self.btn_nav_bench.clicked.connect(self.bench_manager_requested.emit)
+        layout.addWidget(self.btn_nav_bench)
 
-        btn_nav_roles = QPushButton("จัดการบทบาทผู้มาศาล")
-        btn_nav_roles.setObjectName("sidebarButton")
-        btn_nav_roles.setIcon(get_icon("user", color="#4c1d95", size=18))
-        btn_nav_roles.clicked.connect(self.signatory_roles_requested.emit)
-        layout.addWidget(btn_nav_roles)
+        self.btn_nav_roles = QPushButton("จัดการบทบาทผู้มาศาล")
+        self.btn_nav_roles.setObjectName("sidebarButton")
+        self.btn_nav_roles.setIcon(get_icon("user", color="#4c1d95", size=18))
+        self.btn_nav_roles.clicked.connect(self.signatory_roles_requested.emit)
+        layout.addWidget(self.btn_nav_roles)
 
-        btn_nav_court = QPushButton("ตั้งค่าชื่อศาลเริ่มต้น")
-        btn_nav_court.setObjectName("sidebarButton")
-        btn_nav_court.setIcon(get_icon("scale", color="#4c1d95", size=18))
-        btn_nav_court.clicked.connect(self.court_settings_requested.emit)
-        layout.addWidget(btn_nav_court)
+        self.btn_nav_court = QPushButton("ตั้งค่าชื่อศาลเริ่มต้น")
+        self.btn_nav_court.setObjectName("sidebarButton")
+        self.btn_nav_court.setIcon(get_icon("scale", color="#4c1d95", size=18))
+        self.btn_nav_court.clicked.connect(self.court_settings_requested.emit)
+        layout.addWidget(self.btn_nav_court)
+
+        self.btn_nav_tutorial = QPushButton("แนะนำการใช้งาน")
+        self.btn_nav_tutorial.setObjectName("sidebarButton")
+        self.btn_nav_tutorial.setIcon(get_icon("help-circle", color="#4c1d95", size=18))
+        self.btn_nav_tutorial.clicked.connect(self.tutorial_requested.emit)
+        layout.addWidget(self.btn_nav_tutorial)
 
         layout.addSpacing(18)
 
@@ -191,7 +198,7 @@ class SidebarWidget(QFrame):
         status_head.addStretch()
         status_box_layout.addLayout(status_head)
 
-        lbl_status_desc = QLabel("รักษาความมั่นคงปลอดภัยตามมาตรฐานศาลยุติธรรม (Air-Gapped)")
+        lbl_status_desc = QLabel("รักษาความมั่นคงปลอดภัย\nตามมาตรฐานศาลยุติธรรม (Air-Gapped)")
         lbl_status_desc.setObjectName("statusDesc")
         lbl_status_desc.setWordWrap(True)
         status_box_layout.addWidget(lbl_status_desc)

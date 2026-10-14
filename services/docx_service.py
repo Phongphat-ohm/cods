@@ -1,5 +1,5 @@
 """
-JADS Docx Service - High Performance 100% Offline Word Document Generation
+CODS Docx Service - High Performance 100% Offline Word Document Generation
 Performs OpenXML manipulation on template Word files (.docx) using lxml and zipfile.
 Handles placeholder tags, loop blocks, attendee formatting, and XML sanitization.
 100% Offline (Air-Gapped) - Zero external network interactions.

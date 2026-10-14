@@ -16,7 +16,7 @@ class ShortcutsGuideDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("คู่มือคีย์ลัดการทำงานระบบศาล (JADS Shortcuts) - JADS")
+        self.setWindowTitle("คู่มือคีย์ลัดการทำงานระบบศาล (CODS Shortcuts) - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(760, 560)
         self.setMinimumHeight(400)

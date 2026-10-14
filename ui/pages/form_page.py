@@ -1978,3 +1978,27 @@ class FormPage(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "เกิดข้อผิดพลาด", f"ไม่สามารถสร้างเอกสารคำพิพากษาตามยอมได้:\n{str(e)}")
 
+    def get_tutorial_steps(self):
+        """Return tutorial steps for Step 4 (Form Page)."""
+        from ui.components.tutorial_overlay import TutorialStep
+        return [
+            TutorialStep(
+                target=self.txt_judge1,
+                title="ระบบองค์คณะผู้พิพากษา (Bench Pairing)",
+                description="พิมพ์หรือเลือกชื่อผู้พิพากษาเจ้าของสำนวน เมื่อระบบพบประวัติการจับคู่ ระบบจะเติมชื่อผู้พิพากษาองค์คณะคนที่ 2 ให้อัตโนมัติ",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.btn_sec_tab2,
+                title="แท็บที่ 2: รายชื่อผู้มาศาล (Attendees)",
+                description="สำหรับเลือกชิปตำแหน่งผู้มาศาล เช่น โจทก์ จำเลย ทนายความ พร้อมปุ่มจัดเรียงตามแบบพิธีการศาลไทยอัตโนมัติ",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.btn_sec_tab3,
+                title="แท็บที่ 3: ข้อความย่อหน้า & ออกเอกสาร",
+                description="สำหรับพิมพ์หรือดึงข้อความจากแม่แบบ และกดสร้างไฟล์ Word (.docx) ฉบับสมบูรณ์ (หรือกดคีย์ลัด Ctrl+S)",
+                preferred_position="bottom"
+            )
+        ]
+

@@ -330,3 +330,21 @@ class DocTypePage(QWidget):
     def select_doc_type(self, doc_type: str):
         self.set_selected_type(doc_type)
         self.doc_type_selected.emit(doc_type)
+
+    def get_tutorial_steps(self):
+        """Return tutorial steps for Step 3 (Doc Type Selection)."""
+        from ui.components.tutorial_overlay import TutorialStep
+        return [
+            TutorialStep(
+                target=self.card_report,
+                title="รายงานกระบวนพิจารณา",
+                description="สำหรับบันทึกกระบวนพิจารณาคดีทั่วไปประจำวัน เช่น นัดพร้อม, สืบพยาน, เลื่อนคดี, ฟังคำสั่ง/คำพิพากษา พร้อมผู้มาศาลและองค์คณะ",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.card_comp,
+                title="คำพิพากษาตามยอม",
+                description="สำหรับคดีที่มีการทำสัญญาประนีประนอมยอมความ รองรับการระบุข้อหาแห่งคดี สัญญาฉบับลงวันที่ และคำสั่งคืนเงินค่าขึ้นศาล",
+                preferred_position="bottom"
+            )
+        ]

@@ -22,7 +22,7 @@ class TemplateSelectDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("เลือก Template ข้อความกระบวนพิจารณา - JADS")
+        self.setWindowTitle("เลือก Template ข้อความกระบวนพิจารณา - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(880, 600)
         self.selected_content: Optional[str] = None

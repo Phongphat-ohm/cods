@@ -280,3 +280,27 @@ class TablePage(QWidget):
             self.doc_type_changed.emit('compromise')
             self.proceed_to_form_requested.emit()
 
+    def get_tutorial_steps(self):
+        """Return tutorial steps for Step 2 (Table)."""
+        from ui.components.tutorial_overlay import TutorialStep
+        return [
+            TutorialStep(
+                target=self.filter_input,
+                title="ค้นหากรองรายการคดี (Ctrl+F)",
+                description="พิมพ์เลขคดีดำ, คดีแดง, ชื่อโจทก์ หรือจำเลย เพื่อกรองหาคดีที่ต้องการได้อย่างรวดเร็วแบบทันที",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.table_widget,
+                title="ตารางแสดงรายการคดี",
+                description="คลิกเลือกคดีที่ต้องการจัดทำเอกสาร (หรือดับเบิลคลิกแถวคดีเพื่อไปขั้นตอนถัดไปทันที)",
+                preferred_position="top"
+            ),
+            TutorialStep(
+                target=self.btn_next_to_form,
+                title="ปุ่มไปยังขั้นตอนถัดไป (Enter)",
+                description="เมื่อเลือกแถวคดีเรียบร้อยแล้ว กดปุ่มนี้หรือกด Enter เพื่อไปสู่ขั้นตอนเลือกประเภทเอกสาร",
+                preferred_position="bottom"
+            )
+        ]
+

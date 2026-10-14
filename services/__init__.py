@@ -1,5 +1,5 @@
 """
-Services Package for JADS
+Services Package for CODS
 """
 from . import excel_service
 from . import docx_service

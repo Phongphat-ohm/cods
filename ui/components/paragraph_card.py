@@ -200,6 +200,7 @@ class ParagraphCard(QFrame):
                 if self.drag_start_pos and (event.pos() - self.drag_start_pos).manhattanLength() > 4:
                     drag = QDrag(self)
                     mime_data = QMimeData()
+                    mime_data.setData("application/x-cods-paragraph", str(self.index).encode('utf-8'))
                     mime_data.setData("application/x-jads-paragraph", str(self.index).encode('utf-8'))
                     drag.setMimeData(mime_data)
                     drag.exec(Qt.DropAction.MoveAction)
@@ -212,7 +213,7 @@ class ParagraphCard(QFrame):
         return super().eventFilter(source, event)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat("application/x-jads-paragraph"):
+        if event.mimeData().hasFormat("application/x-cods-paragraph") or event.mimeData().hasFormat("application/x-jads-paragraph"):
             event.acceptProposedAction()
             self.setProperty("dropTarget", True)
             self.style().unpolish(self)
@@ -227,9 +228,11 @@ class ParagraphCard(QFrame):
         self.setProperty("dropTarget", False)
         self.style().unpolish(self)
         self.style().polish(self)
-        if event.mimeData().hasFormat("application/x-jads-paragraph"):
+        mime = event.mimeData()
+        if mime.hasFormat("application/x-cods-paragraph") or mime.hasFormat("application/x-jads-paragraph"):
             try:
-                src_str = event.mimeData().data("application/x-jads-paragraph").data().decode('utf-8')
+                tag = "application/x-cods-paragraph" if mime.hasFormat("application/x-cods-paragraph") else "application/x-jads-paragraph"
+                src_str = mime.data(tag).data().decode('utf-8')
                 src_idx = int(src_str)
                 target_idx = self.index
                 if src_idx != target_idx:

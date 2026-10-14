@@ -3,7 +3,7 @@ Page 0: Main Menu & Dashboard
 """
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QFrame,
     QMessageBox, QScrollArea
 )
 from PySide6.QtCore import Qt, Signal
@@ -32,6 +32,7 @@ class MenuPage(QWidget):
     start_requested = Signal()
     template_manager_requested = Signal()
     bench_manager_requested = Signal()
+    signatory_roles_requested = Signal()
     court_settings_requested = Signal()
 
     def __init__(self, parent=None):
@@ -68,7 +69,7 @@ class MenuPage(QWidget):
 
         v_title = QVBoxLayout()
         v_title.setSpacing(4)
-        title = QLabel("ระบบงานศาล (JADS) - โปรแกรมสร้างรายงานกระบวนพิจารณาคดี")
+        title = QLabel("ระบบงานศาล (CODS) - โปรแกรมสร้างรายงานกระบวนพิจารณาคดี")
         title.setObjectName("welcomeTitle")
         subtitle = QLabel("โปรแกรมช่วยเจ้าหน้าที่ธุรการศาลจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม จากตารางนัด Excel สู่ไฟล์ Word อย่างรวดเร็ว ปลอดภัยแบบออฟไลน์ 100%")
         subtitle.setObjectName("welcomeSubtitle")
@@ -92,6 +93,7 @@ class MenuPage(QWidget):
 
         # Card: เริ่มสร้างเอกสาร
         card_report = ClickableDocCard()
+        self.card_report = card_report
         card_report.setStyleSheet(
             "QFrame#docTypeCard { background-color: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; } "
             "QFrame#docTypeCard:hover { border: 1.5px solid #4c1d95; background-color: #faf5ff; }"
@@ -162,29 +164,29 @@ class MenuPage(QWidget):
 
         layout.addSpacing(6)
 
-        # Section 2: เครื่องมือและการตั้งค่าระบบ
-        lbl_sec_utils = QLabel("เครื่องมือและการตั้งค่าระบบ")
-        lbl_sec_utils.setStyleSheet("font-size: 15px; font-weight: 600; color: #475569;")
-        layout.addWidget(lbl_sec_utils)
+        # Section 2: คลังข้อมูลและการตั้งค่าระบบ
+        self.lbl_sec_utils = QLabel("คลังข้อมูลและการตั้งค่าระบบ")
+        self.lbl_sec_utils.setStyleSheet("font-size: 16px; font-weight: 600; color: #475569;")
+        layout.addWidget(self.lbl_sec_utils)
 
-        # Sub Cards Container
-        sub_cards_layout = QHBoxLayout()
-        sub_cards_layout.setSpacing(18)
+        # 2x2 Sub Cards Container
+        sub_cards_layout = QGridLayout()
+        sub_cards_layout.setSpacing(16)
 
         # Card 2: จัดการ Template
-        card_tpl = QFrame()
-        card_tpl.setObjectName("menuSubCardFrame")
-        card_tpl.setStyleSheet(
+        self.card_tpl = QFrame()
+        self.card_tpl.setObjectName("menuSubCardFrame")
+        self.card_tpl.setStyleSheet(
             "QFrame#menuSubCardFrame { background-color: #fcfaff; border: 1.5px solid #f3e8ff; border-radius: 10px; } "
             "QFrame#menuSubCardFrame:hover { border-color: #d8b4fe; background-color: #ffffff; }"
         )
-        c2_layout = QVBoxLayout(card_tpl)
-        c2_layout.setContentsMargins(22, 20, 22, 20)
+        c2_layout = QVBoxLayout(self.card_tpl)
+        c2_layout.setContentsMargins(20, 18, 20, 18)
         c2_layout.setSpacing(10)
 
         c2_header = QHBoxLayout()
         icon2 = QLabel()
-        icon2.setPixmap(get_pixmap("clipboard-list", color="#4c1d95", size=28))
+        icon2.setPixmap(get_pixmap("clipboard-list", color="#4c1d95", size=26))
         title2 = QLabel("จัดการ Template ย่อหน้าส่วนตัว")
         title2.setObjectName("cardSubTitle")
         c2_header.addWidget(icon2)
@@ -192,38 +194,38 @@ class MenuPage(QWidget):
         c2_header.addStretch()
         c2_layout.addLayout(c2_header)
 
-        desc2 = QLabel("จัดเก็บแบบข้อความกระบวนพิจารณาที่ใช้เป็นประจำ จัดหมวดหมู่ และนำไปแทรกลงในรายงานได้อย่างถูกต้องและรวดเร็ว")
+        desc2 = QLabel("จัดเก็บแบบข้อความกระบวนพิจารณาที่ท่านสร้างขึ้นเอง จัดหมวดหมู่ และนำไปแทรกลงในรายงานได้อย่างถูกต้องและรวดเร็ว")
         desc2.setObjectName("cardDesc")
         desc2.setWordWrap(True)
         c2_layout.addWidget(desc2)
         c2_layout.addStretch()
 
-        btn_tpl = QPushButton("เปิดคลัง Template...")
-        btn_tpl.setObjectName("secondaryButton")
-        btn_tpl.setIcon(get_icon("clipboard-list", color="#4c1d95", size=15))
-        btn_tpl.setStyleSheet(
+        self.btn_tpl = QPushButton("เปิดคลัง Template...")
+        self.btn_tpl.setObjectName("secondaryButton")
+        self.btn_tpl.setIcon(get_icon("clipboard-list", color="#4c1d95", size=15))
+        self.btn_tpl.setStyleSheet(
             "QPushButton { background-color: #ffffff; color: #4c1d95; border: 1.5px solid #d8b4fe; border-radius: 6px; padding: 8px 16px; font-weight: 500; } "
             "QPushButton:hover { background-color: #f3e8ff; border-color: #c084fc; }"
         )
-        btn_tpl.setToolTip("เปิดคลังจัดการ Template ย่อหน้าส่วนตัว [Ctrl+T]")
-        btn_tpl.clicked.connect(self.template_manager_requested.emit)
-        c2_layout.addWidget(btn_tpl, alignment=Qt.AlignmentFlag.AlignRight)
-        sub_cards_layout.addWidget(card_tpl)
+        self.btn_tpl.setToolTip("เปิดคลังจัดการ Template ย่อหน้าส่วนตัว [Ctrl+T]")
+        self.btn_tpl.clicked.connect(self.template_manager_requested.emit)
+        c2_layout.addWidget(self.btn_tpl, alignment=Qt.AlignmentFlag.AlignRight)
+        sub_cards_layout.addWidget(self.card_tpl, 0, 0)
 
         # Card 3: คู่องค์คณะ
-        card_bench = QFrame()
-        card_bench.setObjectName("menuSubCardFrame")
-        card_bench.setStyleSheet(
+        self.card_bench = QFrame()
+        self.card_bench.setObjectName("menuSubCardFrame")
+        self.card_bench.setStyleSheet(
             "QFrame#menuSubCardFrame { background-color: #fcfaff; border: 1.5px solid #f3e8ff; border-radius: 10px; } "
             "QFrame#menuSubCardFrame:hover { border-color: #d8b4fe; background-color: #ffffff; }"
         )
-        c3_layout = QVBoxLayout(card_bench)
-        c3_layout.setContentsMargins(22, 20, 22, 20)
+        c3_layout = QVBoxLayout(self.card_bench)
+        c3_layout.setContentsMargins(20, 18, 20, 18)
         c3_layout.setSpacing(10)
 
         c3_header = QHBoxLayout()
         icon3 = QLabel()
-        icon3.setPixmap(get_pixmap("users", color="#4c1d95", size=28))
+        icon3.setPixmap(get_pixmap("users", color="#4c1d95", size=26))
         title3 = QLabel("บันทึกคู่องค์คณะผู้พิพากษา")
         title3.setObjectName("cardSubTitle")
         c3_header.addWidget(icon3)
@@ -237,32 +239,71 @@ class MenuPage(QWidget):
         c3_layout.addWidget(desc3)
         c3_layout.addStretch()
 
-        btn_bench = QPushButton("จัดการคู่องค์คณะ...")
-        btn_bench.setObjectName("secondaryButton")
-        btn_bench.setIcon(get_icon("users", color="#4c1d95", size=15))
-        btn_bench.setStyleSheet(
+        self.btn_bench = QPushButton("จัดการคู่องค์คณะ...")
+        self.btn_bench.setObjectName("secondaryButton")
+        self.btn_bench.setIcon(get_icon("users", color="#4c1d95", size=15))
+        self.btn_bench.setStyleSheet(
             "QPushButton { background-color: #ffffff; color: #4c1d95; border: 1.5px solid #d8b4fe; border-radius: 6px; padding: 8px 16px; font-weight: 500; } "
             "QPushButton:hover { background-color: #f3e8ff; border-color: #c084fc; }"
         )
-        btn_bench.setToolTip("จัดการคู่องค์คณะผู้พิพากษา [Ctrl+B]")
-        btn_bench.clicked.connect(self.bench_manager_requested.emit)
-        c3_layout.addWidget(btn_bench, alignment=Qt.AlignmentFlag.AlignRight)
-        sub_cards_layout.addWidget(card_bench)
+        self.btn_bench.setToolTip("จัดการคู่องค์คณะผู้พิพากษา [Ctrl+B]")
+        self.btn_bench.clicked.connect(self.bench_manager_requested.emit)
+        c3_layout.addWidget(self.btn_bench, alignment=Qt.AlignmentFlag.AlignRight)
+        sub_cards_layout.addWidget(self.card_bench, 0, 1)
 
-        # Card 4: ตั้งค่าชื่อศาลเริ่มต้น
-        card_court = QFrame()
-        card_court.setObjectName("menuSubCardFrame")
-        card_court.setStyleSheet(
+        # Card 4: จัดการบทบาทผู้มาศาล (Quick-Add Chips)
+        self.card_roles = QFrame()
+        self.card_roles.setObjectName("menuSubCardFrame")
+        self.card_roles.setStyleSheet(
             "QFrame#menuSubCardFrame { background-color: #fcfaff; border: 1.5px solid #f3e8ff; border-radius: 10px; } "
             "QFrame#menuSubCardFrame:hover { border-color: #d8b4fe; background-color: #ffffff; }"
         )
-        c4_layout = QVBoxLayout(card_court)
-        c4_layout.setContentsMargins(22, 20, 22, 20)
+        c_roles_layout = QVBoxLayout(self.card_roles)
+        c_roles_layout.setContentsMargins(20, 18, 20, 18)
+        c_roles_layout.setSpacing(10)
+
+        c_roles_header = QHBoxLayout()
+        icon_roles = QLabel()
+        icon_roles.setPixmap(get_pixmap("user", color="#4c1d95", size=26))
+        title_roles = QLabel("จัดการบทบาทผู้มาศาล (Quick-Add)")
+        title_roles.setObjectName("cardSubTitle")
+        c_roles_header.addWidget(icon_roles)
+        c_roles_header.addWidget(title_roles)
+        c_roles_header.addStretch()
+        c_roles_layout.addLayout(c_roles_header)
+
+        desc_roles = QLabel("กำหนดปุ่มลัดเลือกบทบาทผู้มาศาล เช่น โจทก์, จำเลย, ทนายความ เพื่อคลิกเลือกชื่อได้อย่างรวดเร็วในหน้าทำเอกสาร")
+        desc_roles.setObjectName("cardDesc")
+        desc_roles.setWordWrap(True)
+        c_roles_layout.addWidget(desc_roles)
+        c_roles_layout.addStretch()
+
+        self.btn_roles = QPushButton("จัดการบทบาท...")
+        self.btn_roles.setObjectName("secondaryButton")
+        self.btn_roles.setIcon(get_icon("user", color="#4c1d95", size=15))
+        self.btn_roles.setStyleSheet(
+            "QPushButton { background-color: #ffffff; color: #4c1d95; border: 1.5px solid #d8b4fe; border-radius: 6px; padding: 8px 16px; font-weight: 500; } "
+            "QPushButton:hover { background-color: #f3e8ff; border-color: #c084fc; }"
+        )
+        self.btn_roles.setToolTip("จัดการปุ่มบทบาทผู้มาศาล (Quick Add Chips)")
+        self.btn_roles.clicked.connect(self.signatory_roles_requested.emit)
+        c_roles_layout.addWidget(self.btn_roles, alignment=Qt.AlignmentFlag.AlignRight)
+        sub_cards_layout.addWidget(self.card_roles, 1, 0)
+
+        # Card 5: ตั้งค่าชื่อศาลเริ่มต้น
+        self.card_court = QFrame()
+        self.card_court.setObjectName("menuSubCardFrame")
+        self.card_court.setStyleSheet(
+            "QFrame#menuSubCardFrame { background-color: #fcfaff; border: 1.5px solid #f3e8ff; border-radius: 10px; } "
+            "QFrame#menuSubCardFrame:hover { border-color: #d8b4fe; background-color: #ffffff; }"
+        )
+        c4_layout = QVBoxLayout(self.card_court)
+        c4_layout.setContentsMargins(20, 18, 20, 18)
         c4_layout.setSpacing(10)
 
         c4_header = QHBoxLayout()
         icon4 = QLabel()
-        icon4.setPixmap(get_pixmap("scale", color="#4c1d95", size=28))
+        icon4.setPixmap(get_pixmap("scale", color="#4c1d95", size=26))
         title4 = QLabel("ตั้งค่าชื่อศาลเริ่มต้น")
         title4.setObjectName("cardSubTitle")
         c4_header.addWidget(icon4)
@@ -277,16 +318,16 @@ class MenuPage(QWidget):
         c4_layout.addWidget(self.lbl_menu_court_desc)
         c4_layout.addStretch()
 
-        btn_court = QPushButton("ตั้งค่าชื่อศาล...")
-        btn_court.setObjectName("secondaryButton")
-        btn_court.setIcon(get_icon("scale", color="#4c1d95", size=15))
-        btn_court.setStyleSheet(
+        self.btn_court = QPushButton("ตั้งค่าชื่อศาล...")
+        self.btn_court.setObjectName("secondaryButton")
+        self.btn_court.setIcon(get_icon("scale", color="#4c1d95", size=15))
+        self.btn_court.setStyleSheet(
             "QPushButton { background-color: #ffffff; color: #4c1d95; border: 1.5px solid #d8b4fe; border-radius: 6px; padding: 8px 16px; font-weight: 500; } "
             "QPushButton:hover { background-color: #f3e8ff; border-color: #c084fc; }"
         )
-        btn_court.clicked.connect(self.court_settings_requested.emit)
-        c4_layout.addWidget(btn_court, alignment=Qt.AlignmentFlag.AlignRight)
-        sub_cards_layout.addWidget(card_court)
+        self.btn_court.clicked.connect(self.court_settings_requested.emit)
+        c4_layout.addWidget(self.btn_court, alignment=Qt.AlignmentFlag.AlignRight)
+        sub_cards_layout.addWidget(self.card_court, 1, 1)
 
         layout.addLayout(sub_cards_layout)
         layout.addStretch()
@@ -313,4 +354,45 @@ class MenuPage(QWidget):
         else:
             self.lbl_menu_court_desc.setText("ยังไม่ได้กำหนดชื่อศาลเริ่มต้น กดปุ่มเพื่อกำหนดชื่อศาลที่จะให้ระบบเติมให้อัตโนมัติ")
             self.lbl_menu_court_desc.setStyleSheet("font-size: 13px; color: #475569;")
+
+    def get_tutorial_steps(self):
+        """Spotlight tutorial steps introducing Menu page and the Data Library & Settings tools."""
+        from ui.components.tutorial_overlay import TutorialStep
+        steps = []
+        if hasattr(self, 'card_report') and self.card_report:
+            steps.append(TutorialStep(
+                target=self.card_report,
+                title="1. ระบบจัดทำเอกสารคดี (4 ขั้นตอน)",
+                description="คลิกปุ่มนี้หรือกดปุ่ม PgDown เพื่อเริ่มต้นกระบวนการจัดทำเอกสาร โดยระบบจะพาผ่านขั้นตอนนำเข้า Excel -> เลือกคดี -> เลือกประเภทเอกสาร -> สร้างเอกสาร Word",
+                preferred_position="bottom"
+            ))
+        if hasattr(self, 'card_tpl') and self.card_tpl:
+            steps.append(TutorialStep(
+                target=self.card_tpl,
+                title="2. คลัง Template ย่อหน้าส่วนตัว",
+                description="คลังเก็บแบบข้อความกระบวนพิจารณาที่ท่านสร้างขึ้นเอง สามารถใส่ตัวแปร {{ชื่อตัวแปร}} เพื่อให้ระบบสแกนสร้างช่องกรอกข้อมูลให้อัตโนมัติในหน้าทำเอกสาร",
+                preferred_position="top"
+            ))
+        if hasattr(self, 'card_bench') and self.card_bench:
+            steps.append(TutorialStep(
+                target=self.card_bench,
+                title="3. บันทึกคู่องค์คณะผู้พิพากษา",
+                description="จับคู่ผู้พิพากษาเจ้าของสำนวนและองค์คณะ เมื่อพิมพ์หรือเลือกชื่อผู้พิพากษาคนที่ 1 ระบบจะเติมชื่อองค์คณะคนที่ 2 ให้อัตโนมัติ",
+                preferred_position="top"
+            ))
+        if hasattr(self, 'card_roles') and self.card_roles:
+            steps.append(TutorialStep(
+                target=self.card_roles,
+                title="4. จัดการบทบาทผู้มาศาล (Quick-Add)",
+                description="กำหนดและจัดลำดับปุ่มลัดเลือกบทบาทผู้มาศาล เช่น โจทก์, จำเลย, ทนายความ เพื่อคลิกเลือกชื่อได้อย่างรวดเร็วในหน้าทำเอกสาร",
+                preferred_position="top"
+            ))
+        if hasattr(self, 'card_court') and self.card_court:
+            steps.append(TutorialStep(
+                target=self.card_court,
+                title="5. ตั้งค่าชื่อศาลเริ่มต้น",
+                description="กำหนดชื่อศาลเริ่มต้นที่จะปรากฏบนหัวรายงานกระบวนพิจารณาและเอกสารทุกฉบับ ไม่ต้องพิมพ์ซ้ำทุกครั้ง",
+                preferred_position="top"
+            ))
+        return steps
 

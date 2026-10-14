@@ -46,7 +46,7 @@ def resolve_data_dir() -> str:
         os.remove(test_file)
         return local_data
     except (PermissionError, OSError):
-        appdata_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "JADS", "data")
+        appdata_dir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "CODS", "data")
         os.makedirs(appdata_dir, exist_ok=True)
         return appdata_dir
 
@@ -105,7 +105,16 @@ def get_logo_path() -> str:
 
 # Base paths for application storage
 DATA_DIR = resolve_data_dir()
-DB_FILE = os.path.join(DATA_DIR, "jads.db")
+
+# Migrate legacy jads.db to cods.db seamlessly if needed
+_cods_db = os.path.join(DATA_DIR, "cods.db")
+_jads_db = os.path.join(DATA_DIR, "jads.db")
+if not os.path.exists(_cods_db) and os.path.exists(_jads_db):
+    try:
+        shutil.copy2(_jads_db, _cods_db)
+    except Exception:
+        pass
+DB_FILE = _cods_db if (os.path.exists(_cods_db) or not os.path.exists(_jads_db)) else _jads_db
 
 # Legacy JSON file references for migration & backward compatibility
 LEGACY_TEMPLATES_FILE = os.path.join(DATA_DIR, "paragraph_templates.json")
@@ -130,51 +139,8 @@ def atomic_save_json(file_path: str, data: Any) -> bool:
     except Exception:
         return False
 
-# Standard court templates curated for Thai judicial proceedings
-DEFAULT_TEMPLATES: List[Dict[str, Any]] = [
-    {
-        "id": "tpl_1",
-        "title": "นัดพร้อมเพื่อกำหนดวันนัดสืบพยาน",
-        "category": "นัดพร้อม / กำหนดวัน",
-        "content": "นัดพร้อมวันนี้ ทนายโจทก์และทนายจำเลยมาศาล ศาลสอบคู่ความแล้ว แถลงว่าคดีนี้ตกลงกันไม่ได้ จึงประสงค์จะสืบพยานต่อไป คู่ความกำหนดวันนัดสืบพยานร่วมกัน โดยโจทก์นำสืบพยาน ๑ นัด จำเลยนำสืบพยาน ๑ นัด จึงให้นัดสืบพยานโจทก์ในวันที่ ... และนัดสืบพยานจำเลยในวันที่ ... ให้คู่ความเตรียมพยานมาให้พร้อมสืบในวันนัด"
-    },
-    {
-        "id": "tpl_2",
-        "title": "นัดฟังคำพิพากษา / คำสั่ง",
-        "category": "คำพิพากษา",
-        "content": "นัดฟังคำพิพากษาวันนี้ โจทก์และจำเลยมาศาล ศาลได้อ่านคำพิพากษาให้คู่ความฟังแล้ว คู่ความลงลายมือชื่อรับทราบ"
-    },
-    {
-        "id": "tpl_3",
-        "title": "ทำสัญญาประนีประนอมยอมความ",
-        "category": "ไกล่เกลี่ย / ยอมความ",
-        "content": "วันนี้ ทนายโจทก์และทนายจำเลยมาศาล คู่ความแถลงว่าสามารถตกลงระงับข้อพิพาทกันได้ จึงได้ทำสัญญาประนีประนอมยอมความฉบับลงวันที่วันนี้เสนอต่อศาล ศาลได้ตรวจสัญญาประนีประนอมยอมความแล้ว เห็นว่าไม่ขัดต่อกฎหมายและคู่ความได้ลงลายมือชื่อถูกต้อง จึงพิพากษาตามยอม คดีเป็นอันเสร็จเด็ดขาด"
-    },
-    {
-        "id": "tpl_4",
-        "title": "จำเลยให้การรับสารภาพ (คดีอาญา)",
-        "category": "คดีอาญา",
-        "content": "นัดพิจารณาวันนี้ พนักงานอัยการโจทก์ จำเลย และทนายจำเลยมาศาล ศาลได้อ่านและอธิบายฟ้องให้จำเลยฟัง จำเลยให้การรับสารภาพตามฟ้องทุกประการ ศาลเห็นว่าคดีมีพยานหลักฐานพอวินิจฉัยได้ จึงให้นัดฟังคำพิพากษาในวันที่ ... เวลา ๐๙.๐๐ นาฬิกา"
-    },
-    {
-        "id": "tpl_5",
-        "title": "คู่ความขอเลื่อนคดีเนื่องจากพยานป่วย",
-        "category": "ขอเลื่อนคดี",
-        "content": "นัดสืบพยานวันนี้ ทนายโจทก์และทนายจำเลยมาศาล ทนายโจทก์แถลงว่าพยานปากนาย ... มีอาการป่วยกะทันหันไม่สามารถเดินทางมาเบิกความได้ โดยมีใบรับรองแพทย์มาแสดง จึงขอเลื่อนการสืบพยานไปอีก ๑ นัด ทนายจำเลยไม่คัดค้าน ศาลเห็นว่ามีเหตุจำเป็นอันมิอาจก้าวล่วงได้ จึงอนุญาตให้เลื่อนไปนัดสืบพยานโจทก์ในวันที่ ..."
-    },
-    {
-        "id": "tpl_6",
-        "title": "โจทก์ขอถอนฟ้อง",
-        "category": "ถอนฟ้อง / จำหน่ายคดี",
-        "content": "วันนี้ โจทก์ยื่นคำร้องขอถอนฟ้อง แถลงว่าจำเลยได้ชำระหนี้ตามฟ้องครบถ้วนแล้ว จึงไม่ประสงค์จะดำเนินคดีต่อไป จำเลยแถลงไม่คัดค้าน ศาลพิจารณาแล้วอนุญาตให้โจทก์ถอนฟ้องได้ ให้จำหน่ายคดีออกจากสารบบความ คืนเงินค่าขึ้นศาลตามระเบียบ"
-    },
-    {
-        "id": "tpl_7",
-        "title": "นัดชี้สองสถานและกำหนดแนวทางนำสืบ",
-        "category": "ชี้สองสถาน",
-        "content": "นัดชี้สองสถานวันนี้ ทนายโจทก์และทนายจำเลยมาศาล ศาลได้ตรวจคำฟ้อง คำให้การ และสอบถามคู่ความแล้ว กำหนดประเด็นข้อพิพาทและหน้าที่นำสืบดังนี้ ๑. จำเลยผิดสัญญาตามฟ้องหรือไม่ (โจทก์มีหน้าที่นำสืบ) ๒. ค่าเสียหายมีเพียงใด (โจทก์มีหน้าที่นำสืบ) ให้นัดสืบพยานโจทก์ในวันที่ ... และนัดสืบพยานจำเลยในวันที่ ..."
-    }
-]
+# No default seed templates - template storage starts clean/unseeded per user request
+DEFAULT_TEMPLATES: List[Dict[str, Any]] = []
 
 # Standard sample bench pairings
 DEFAULT_BENCH_PAIRS: List[Dict[str, Any]] = [
@@ -331,19 +297,23 @@ def init_db(force: bool = False):
                     except Exception:
                         pass
 
-                target_tpls = migrated_tpls if migrated_tpls else DEFAULT_TEMPLATES
-                for idx, t in enumerate(target_tpls):
-                    t_id = t.get("id") or f"tpl_{idx+1}"
-                    t_title = t.get("title", "")
-                    t_cat = t.get("category", "ทั่วไป")
-                    t_cnt = t.get("content", "")
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO paragraph_templates (id, title, category, content, sort_order)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (t_id, t_title, t_cat, t_cnt, idx))
-                conn.commit()
+                if migrated_tpls:
+                    for idx, t in enumerate(migrated_tpls):
+                        t_id = t.get("id") or f"tpl_{idx+1}"
+                        t_title = t.get("title", "")
+                        t_cat = t.get("category", "ทั่วไป")
+                        t_cnt = t.get("content", "")
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO paragraph_templates (id, title, category, content, sort_order)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (t_id, t_title, t_cat, t_cnt, idx))
+                    conn.commit()
             cursor.execute("INSERT OR REPLACE INTO schema_migrations (name) VALUES ('paragraph_templates_migrated')")
             conn.commit()
+
+        # Purge legacy default seed templates (tpl_1..tpl_7) if present, preserving user-created templates
+        cursor.execute("DELETE FROM paragraph_templates WHERE id IN ('tpl_1', 'tpl_2', 'tpl_3', 'tpl_4', 'tpl_5', 'tpl_6', 'tpl_7')")
+        conn.commit()
 
         # C. Migrate bench_pairs
         cursor.execute("SELECT 1 FROM schema_migrations WHERE name = 'bench_pairs_migrated'")
@@ -769,3 +739,52 @@ def set_default_court_name(court_name: str) -> bool:
         """, (c_name,))
         conn.commit()
         return True
+
+
+# ================= Tutorial & Onboarding State =================
+
+def is_tutorial_completed(tutorial_key: str) -> bool:
+    """
+    Check if a specific tutorial or onboarding step has been completed or dismissed.
+    Key examples: 'welcome_wizard', 'step_import', 'step_table', 'step_doctype', 'step_form'
+    """
+    init_db()
+    db_key = f"tut_{tutorial_key}"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM app_config WHERE key = ?", (db_key,))
+        row = cursor.fetchone()
+        if not row:
+            return False
+        return str(row["value"]).strip().lower() in ("1", "true", "yes", "completed")
+
+
+def mark_tutorial_completed(tutorial_key: str, completed: bool = True) -> bool:
+    """
+    Mark a specific tutorial as completed or uncompleted in SQLite app_config.
+    """
+    init_db()
+    db_key = f"tut_{tutorial_key}"
+    val = "true" if completed else "false"
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+        """, (db_key, val))
+        conn.commit()
+        return True
+
+
+def reset_all_tutorials() -> bool:
+    """
+    Reset all tutorial states so the user can experience the guides and tours again.
+    """
+    init_db()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM app_config WHERE key LIKE 'tut_%'")
+        conn.commit()
+        return True
+
