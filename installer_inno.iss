@@ -6,7 +6,7 @@
 
 #define MyAppName "CODS"
 #define MyAppFullName "CODS - Court Official Document System"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "Court Official Document System"
 #define MyAppExeName "CODS.exe"
 
@@ -21,7 +21,7 @@ DefaultDirName={localappdata}\Programs\CODS
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=dist_installer
-OutputBaseFilename=CODS_Setup_v1.0
+OutputBaseFilename=CODS_Setup_v1.1
 SetupIconFile=logo.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
