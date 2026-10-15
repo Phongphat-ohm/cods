@@ -3,6 +3,50 @@ Central Constants for CODS (Court Official Document System)
 Provides standardized court case types, attendee roles, and judicial sorting weights.
 """
 
+APP_NAME = "CODS"
+APP_FULL_NAME = "CODS - Court Official Document System"
+APP_SUBTITLE = "ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม"
+APP_VERSION = "1.2.0"
+APP_RELEASE_DATE = "15 ตุลาคม 2569"
+APP_ORGANIZATION = "Court of Justice (ศาลยุติธรรม)"
+APP_OFFLINE_COMPLIANCE = "100% Offline & Air-Gapped Certified"
+
+APP_CHANGELOG = [
+    {
+        "version": "1.2.0",
+        "date": "15 ตุลาคม 2569",
+        "highlights": [
+            "หน้าต่าง Loading Screen (Splash Screen) ธีมสว่างศาลยุติธรรม (Judicial White Theme) แสดงผลรวดเร็วทันที",
+            "สถาปัตยกรรม Asynchronous Phased Loader เปิดระบบและอัปเดตแถบเปอร์เซ็นต์อย่างนุ่มนวล",
+            "ระบบความปลอดภัยตอนถอนการติดตั้ง (Uninstall) ยืนยันก่อนลบและเลือกได้ว่าจะเก็บหรือลบข้อมูลคดี",
+            "แยกสถาปัตยกรรม Ultra-Fast Bootstrapper ลดเวลาเริ่มระบบให้ตอบสนองทันที (< 150ms)"
+        ]
+    },
+    {
+        "version": "1.1.0",
+        "date": "14 ตุลาคม 2569",
+        "highlights": [
+            "ระบบตัวติดตั้ง Inno Setup รองรับโหมด Maintenance (Update / Repair / Uninstall)",
+            "เพิ่มหน้าต่างเกี่ยวกับโปรแกรม (About CODS) พร้อมปุ่มลัดเปิดโฟลเดอร์ data/ และ templates/",
+            "แสดงผลหมายเลขเวอร์ชันชัดเจนทั่วทั้งระบบ (Title Bar, Sidebar, Dashboard)",
+            "ปรับปรุงสคริปต์คอมไพล์ build_installer.py รองรับ Unicode 100% ปลอดภัยต่อโฟลเดอร์ภาษาไทย",
+            "ระบบปกป้องฐานข้อมูลคดี SQLite ไม่ให้ถูกเขียนทับหรือสูญหายในทุกกรณี"
+        ]
+    },
+    {
+        "version": "1.0.0",
+        "date": "12 ตุลาคม 2569",
+        "highlights": [
+            "ระบบประมวลผลตารางนัด Excel (.xlsx) และจับคู่หัวตารางอัตโนมัติ",
+            "สร้างเอกสารรายงานกระบวนพิจารณา Word (.docx) ตามแบบพิมพ์ ๒๒ แบบออฟไลน์ 100%",
+            "ระบบบันทึกและจับคู่คู่องค์คณะผู้พิพากษาอัตโนมัติ (Bench Pairing)",
+            "คลังข้อความแม่แบบย่อหน้าส่วนตัว (Personal Paragraph Templates)",
+            "ระบบจัดลำดับและบทบาทผู้มาศาลตามธรรมเนียมปฏิบัติของศาลยุติธรรม",
+            "ชุดฟอนต์ Kanit TTF และธีมราชการศาลทางการ (Official Judicial Theme)"
+        ]
+    }
+]
+
 DEFAULT_CASE_TYPES = [
     "ผบ.",
     "ผบ. (ผู้บริโภค)",

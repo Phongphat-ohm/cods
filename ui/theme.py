@@ -50,8 +50,10 @@ def load_application_fonts() -> None:
 
 
 def get_default_font(size: int = 11) -> QFont:
-    """Return default application font with Kanit family."""
-    font = QFont("Kanit", size)
+    """Return default application font with Kanit family and Thai fallback chain."""
+    font = QFont()
+    font.setFamilies(["Kanit", "Sarabun", "Segoe UI", "Tahoma", "sans-serif"])
+    font.setPointSize(size)
     return font
 
 
@@ -62,7 +64,7 @@ def get_application_stylesheet() -> str:
     """
     return """
         QWidget {
-            font-family: 'Kanit', sans-serif;
+            font-family: 'Kanit', 'Sarabun', 'Segoe UI', 'Tahoma', sans-serif;
             font-size: 15px;
             color: #0f172a;
         }

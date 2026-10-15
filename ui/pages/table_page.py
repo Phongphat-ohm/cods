@@ -151,89 +151,97 @@ class TablePage(QWidget):
 
     def set_table_data(self, headers: List[str], rows: List[Dict[str, Any]], filename: str, mapping: Dict[str, str]):
         self.excel_rows = rows
-        self.table_widget.clear()
-        if hasattr(self, 'empty_state_widget'):
-            self.empty_state_widget.hide()
-        if not rows:
-            self.lbl_table_status.setText("ไม่พบข้อมูลคดีในไฟล์ Excel")
-            return
+        self.table_widget.setUpdatesEnabled(False)
+        self.table_widget.blockSignals(True)
+        try:
+            self.table_widget.clear()
+            if hasattr(self, 'empty_state_widget'):
+                self.empty_state_widget.hide()
+            if not rows:
+                self.lbl_table_status.setText("ไม่พบข้อมูลคดีในไฟล์ Excel")
+                return
 
-        cols = list(rows[0].keys())
-        self.table_widget.setColumnCount(len(cols))
-        self.table_widget.setRowCount(len(rows))
-        self.table_widget.setHorizontalHeaderLabels(cols)
-        self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        self.table_widget.horizontalHeader().setStretchLastSection(True)
+            cols = list(rows[0].keys())
+            self.table_widget.setColumnCount(len(cols))
+            self.table_widget.setRowCount(len(rows))
+            self.table_widget.setHorizontalHeaderLabels(cols)
+            self.table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            self.table_widget.horizontalHeader().setStretchLastSection(True)
 
-        for r_idx, r_data in enumerate(rows):
-            for c_idx, col_name in enumerate(cols):
-                val = r_data.get(col_name, "")
-                item = QTableWidgetItem(str(val))
-                item.setData(Qt.ItemDataRole.UserRole, r_idx)
-                self.table_widget.setItem(r_idx, c_idx, item)
+            for r_idx, r_data in enumerate(rows):
+                for c_idx, col_name in enumerate(cols):
+                    val = r_data.get(col_name, "")
+                    item = QTableWidgetItem(str(val) if val is not None else "")
+                    item.setData(Qt.ItemDataRole.UserRole, r_idx)
+                    self.table_widget.setItem(r_idx, c_idx, item)
 
-        self.table_widget.resizeColumnsToContents()
-        for c in range(len(cols)):
-            if self.table_widget.columnWidth(c) < 90:
-                self.table_widget.setColumnWidth(c, 90)
+            for c in range(len(cols)):
+                col_w = max(100, min(320, self.table_widget.sizeHintForColumn(c)))
+                self.table_widget.setColumnWidth(c, col_w)
 
-        mapped_black = mapping.get('case_black_no')
-        mapped_red = mapping.get('case_red_no')
-        status_text = f"ไฟล์: {filename} (พบ {len(rows)} คดี, {len(headers)} คอลัมน์ที่มีข้อมูล)"
-        default_court = storage_service.get_default_court_name()
-        if default_court:
-            status_text += f" | ศาล: {default_court}"
-        if mapped_black:
-            status_text += f" | คดีดำ: {mapped_black}"
-        if mapped_red:
-            status_text += f" | คดีแดง: {mapped_red}"
-        self._base_status_text = status_text
-        self.lbl_table_status.setText(status_text)
-
-        self.table_widget.selectRow(0)
+            mapped_black = mapping.get('case_black_no')
+            mapped_red = mapping.get('case_red_no')
+            status_text = f"ไฟล์: {filename} (พบ {len(rows)} คดี, {len(headers)} คอลัมน์ที่มีข้อมูล)"
+            default_court = storage_service.get_default_court_name()
+            if default_court:
+                status_text += f" | ศาล: {default_court}"
+            if mapped_black:
+                status_text += f" | คดีดำ: {mapped_black}"
+            if mapped_red:
+                status_text += f" | คดีแดง: {mapped_red}"
+            self._base_status_text = status_text
+            self.lbl_table_status.setText(status_text)
+            self.table_widget.selectRow(0)
+        finally:
+            self.table_widget.blockSignals(False)
+            self.table_widget.setUpdatesEnabled(True)
 
     def handle_filter_table(self, query: str):
         q = query.strip().lower()
         total_rows = self.table_widget.rowCount()
-        if not q:
+        self.table_widget.setUpdatesEnabled(False)
+        try:
+            if not q:
+                for r in range(total_rows):
+                    self.table_widget.setRowHidden(r, False)
+                if hasattr(self, '_base_status_text'):
+                    self.lbl_table_status.setText(self._base_status_text)
+                if hasattr(self, 'empty_state_widget'):
+                    self.empty_state_widget.hide()
+                return
+
+            visible_count = 0
+            first_visible_row = -1
             for r in range(total_rows):
-                self.table_widget.setRowHidden(r, False)
-            if hasattr(self, '_base_status_text'):
-                self.lbl_table_status.setText(self._base_status_text)
-            if hasattr(self, 'empty_state_widget'):
-                self.empty_state_widget.hide()
-            return
+                match = False
+                for c in range(self.table_widget.columnCount()):
+                    item = self.table_widget.item(r, c)
+                    if item and q in item.text().lower():
+                        match = True
+                        break
+                self.table_widget.setRowHidden(r, not match)
+                if match:
+                    visible_count += 1
+                    if first_visible_row == -1:
+                        first_visible_row = r
 
-        visible_count = 0
-        first_visible_row = -1
-        for r in range(total_rows):
-            match = False
-            for c in range(self.table_widget.columnCount()):
-                item = self.table_widget.item(r, c)
-                if item and q in item.text().lower():
-                    match = True
-                    break
-            self.table_widget.setRowHidden(r, not match)
-            if match:
-                visible_count += 1
-                if first_visible_row == -1:
-                    first_visible_row = r
-
-        if first_visible_row != -1:
-            self.table_widget.selectRow(first_visible_row)
-        else:
-            self.table_widget.clearSelection()
-
-        # Show empty state overlay if no cases match
-        if hasattr(self, 'empty_state_widget'):
-            if visible_count == 0:
-                self.empty_state_widget.show()
+            if first_visible_row != -1:
+                self.table_widget.selectRow(first_visible_row)
             else:
-                self.empty_state_widget.hide()
+                self.table_widget.clearSelection()
 
-        self.lbl_table_status.setText(
-            f"แสดงผล {visible_count} จากทั้งหมด {total_rows} คดี (คำค้นหา: '{query.strip()}')"
-        )
+            # Show empty state overlay if no cases match
+            if hasattr(self, 'empty_state_widget'):
+                if visible_count == 0:
+                    self.empty_state_widget.show()
+                else:
+                    self.empty_state_widget.hide()
+
+            self.lbl_table_status.setText(
+                f"แสดงผล {visible_count} จากทั้งหมด {total_rows} คดี (คำค้นหา: '{query.strip()}')"
+            )
+        finally:
+            self.table_widget.setUpdatesEnabled(True)
 
     def handle_selection_changed(self):
         selected_indexes = self.table_widget.selectionModel().selectedRows()

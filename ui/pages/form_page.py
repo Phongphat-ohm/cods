@@ -1225,7 +1225,7 @@ class FormPage(QWidget):
         if is_compromise:
             candidates = ["คำพิพากษาตามยอม.docx", "template2.docx"]
         else:
-            candidates = ["template.docx"]
+            candidates = ["รายงานกระบวนพิจารณา.docx", "template.docx"]
 
         for c in candidates:
             p = os.path.join(tpl_dir, c)
@@ -1236,7 +1236,7 @@ class FormPage(QWidget):
             if f.endswith(".docx") and not f.startswith("~$"):
                 if is_compromise and ("ตามยอม" in f or "template2" in f):
                     return os.path.join(tpl_dir, f)
-                elif not is_compromise and "template" in f:
+                elif not is_compromise and ("รายงาน" in f or "กระบวน" in f or "template" in f):
                     return os.path.join(tpl_dir, f)
         return None
 
@@ -1741,28 +1741,13 @@ class FormPage(QWidget):
             self.txt_case_black.setFocus()
             return
 
-        tpl_dir = storage_service.get_templates_dir()
-
-        tpl_candidates = ["template.docx"]
-        tpl_path = None
-
-        for c in tpl_candidates:
-            p = os.path.join(tpl_dir, c)
-            if os.path.exists(p):
-                tpl_path = p
-                break
-
-        if not tpl_path and os.path.exists(tpl_dir):
-            for f in os.listdir(tpl_dir):
-                if f.endswith(".docx") and not f.startswith("~$"):
-                    tpl_path = os.path.join(tpl_dir, f)
-                    break
-
+        tpl_path = self.get_active_template_path()
         if not tpl_path or not os.path.exists(tpl_path):
+            tpl_dir = storage_service.get_templates_dir()
             QMessageBox.critical(self, "ข้อผิดพลาด", f"ไม่พบไฟล์ Template Word (.docx) ในโฟลเดอร์:\n{tpl_dir}")
             return
 
-        safe_black = case_black.replace('/', '-').replace('\\', '-')
+        safe_black = re.sub(r'[\\/*?:"<>|]', '-', case_black)
         default_filename = f"รายงาน_{safe_black}.docx"
         save_path, _ = QFileDialog.getSaveFileName(
             self, "บันทึกรายงานกระบวนพิจารณา (.docx)", default_filename, "Word Document (*.docx)"
@@ -1831,7 +1816,7 @@ class FormPage(QWidget):
                 norm_file = os.path.normpath(os.path.abspath(save_path))
                 if os.path.exists(norm_file):
                     try:
-                        subprocess.Popen(f'explorer /select,"{norm_file}"')
+                        subprocess.Popen(['explorer', f'/select,{norm_file}'])
                     except Exception:
                         folder = os.path.dirname(norm_file)
                         os.startfile(folder)
@@ -1906,7 +1891,7 @@ class FormPage(QWidget):
             )
             return
 
-        safe_black = case_black.replace('/', '-').replace('\\', '-')
+        safe_black = re.sub(r'[\\/*?:"<>|]', '-', case_black)
         default_filename = f"คำพิพากษาตามยอม_{safe_black}.docx"
         save_path, _ = QFileDialog.getSaveFileName(
             self, "บันทึกคำพิพากษาตามยอม (.docx)", default_filename, "Word Document (*.docx)"
@@ -1962,7 +1947,7 @@ class FormPage(QWidget):
                 norm_file = os.path.normpath(os.path.abspath(save_path))
                 if os.path.exists(norm_file):
                     try:
-                        subprocess.Popen(f'explorer /select,"{norm_file}"')
+                        subprocess.Popen(['explorer', f'/select,{norm_file}'])
                     except Exception:
                         folder = os.path.dirname(norm_file)
                         os.startfile(folder)
@@ -2001,4 +1986,13 @@ class FormPage(QWidget):
                 preferred_position="bottom"
             )
         ]
+
+    def has_unsaved_content(self) -> bool:
+        """Check if user has modified form data or added non-empty paragraphs."""
+        for card in getattr(self, 'paragraph_cards', []):
+            if hasattr(card, 'get_text') and card.get_text().strip():
+                return True
+        if hasattr(self, 'txt_case_black') and self.txt_case_black.text().strip():
+            return True
+        return False
 

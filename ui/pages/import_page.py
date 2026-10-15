@@ -76,7 +76,7 @@ class ImportPage(QWidget):
 
         btn_back = QPushButton("กลับหน้าหลัก")
         btn_back.setObjectName("secondaryButton")
-        btn_back.setIcon(get_icon("arrow-left", color="#1e3a8a", size=16))
+        btn_back.setIcon(get_icon("arrow-left", color="#4c1d95", size=16))
         btn_back.setToolTip("กลับหน้าหลัก [PgUp]")
         btn_back.clicked.connect(self.back_requested.emit)
         header_layout.addWidget(btn_back)
@@ -90,7 +90,7 @@ class ImportPage(QWidget):
         box_layout.setSpacing(18)
 
         icon = QLabel()
-        icon.setPixmap(get_pixmap("file-spreadsheet", color="#1e3a8a", size=60))
+        icon.setPixmap(get_pixmap("file-spreadsheet", color="#4c1d95", size=60))
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         box_layout.addWidget(icon)
 

@@ -80,9 +80,18 @@ THAI_MONTHS = [
 ]
 
 THAI_SHORT_MONTHS = {
-    'ม.ค.': 'มกราคม', 'ก.พ.': 'กุมภาพันธ์', 'มี.ค.': 'มีนาคม', 'เม.ย.': 'เมษายน',
-    'พ.ค.': 'พฤษภาคม', 'มิ.ย.': 'มิถุนายน', 'ก.ค.': 'กรกฎาคม', 'ส.ค.': 'สิงหาคม',
-    'ก.ย.': 'กันยายน', 'ต.ค.': 'ตุลาคม', 'พ.ย.': 'พฤศจิกายน', 'ธ.ค.': 'ธันวาคม'
+    'ม.ค.': 'มกราคม', 'ม.ค': 'มกราคม', 'มค': 'มกราคม',
+    'ก.พ.': 'กุมภาพันธ์', 'ก.พ': 'กุมภาพันธ์', 'กพ': 'กุมภาพันธ์',
+    'มี.ค.': 'มีนาคม', 'มี.ค': 'มีนาคม', 'มีค': 'มีนาคม',
+    'เม.ย.': 'เมษายน', 'เม.ย': 'เมษายน', 'เมย': 'เมษายน',
+    'พ.ค.': 'พฤษภาคม', 'พ.ค': 'พฤษภาคม', 'พค': 'พฤษภาคม',
+    'มิ.ย.': 'มิถุนายน', 'มิ.ย': 'มิถุนายน', 'มิย': 'มิถุนายน',
+    'ก.ค.': 'กรกฎาคม', 'ก.ค': 'กรกฎาคม', 'กค': 'กรกฎาคม',
+    'ส.ค.': 'สิงหาคม', 'ส.ค': 'สิงหาคม', 'สค': 'สิงหาคม',
+    'ก.ย.': 'กันยายน', 'ก.ย': 'กันยายน', 'กย': 'กันยายน',
+    'ต.ค.': 'ตุลาคม', 'ต.ค': 'ตุลาคม', 'ตค': 'ตุลาคม',
+    'พ.ย.': 'พฤศจิกายน', 'พ.ย': 'พฤศจิกายน', 'พย': 'พฤศจิกายน',
+    'ธ.ค.': 'ธันวาคม', 'ธ.ค': 'ธันวาคม', 'ธค': 'ธันวาคม'
 }
 
 
@@ -363,20 +372,26 @@ def read_excel_data(file_path: str) -> Tuple[List[str], List[Dict[str, Any]]]:
 def to_full_buddhist_year(val: Any) -> str:
     """
     Convert 2-digit or 4-digit Gregorian or Buddhist years to standard 4-digit Buddhist Era (B.E.).
-    Examples:
-      '2569' -> '2569'
-      '69'   -> '2569'
-      '2026' -> '2569'
-      '26'   -> '2569'
+    Handles strings containing slashes (e.g. case numbers like '12/2569').
     """
     if val is None:
         return ""
     s = str(val).strip()
-    digits = re.findall(r'\d+', s)
-    if not digits:
+    all_nums = re.findall(r'\d+', s)
+    if not all_nums:
         return s
 
-    num = int(digits[0])
+    # Prefer 4-digit number
+    four_digits = [n for n in all_nums if len(n) == 4]
+    if four_digits:
+        num = int(four_digits[-1])
+    elif '/' in s:
+        parts = s.split('/')
+        last_digits = re.findall(r'\d+', parts[-1])
+        num = int(last_digits[0]) if last_digits else int(all_nums[0])
+    else:
+        num = int(all_nums[0])
+
     if num >= 2400:
         return str(num)
     elif 1900 <= num <= 2200:
@@ -390,6 +405,21 @@ def to_full_buddhist_year(val: Any) -> str:
     elif num < 20:
         return str(2000 + num + 543)
 
+    return s
+
+
+def clean_date_string(s: str) -> str:
+    """
+    Strip prefixes and time representations (both : and . formats like '09.00 น.' and ISO 'T00:00:00')
+    from date strings to prevent numbers in time being mistaken for days or years.
+    """
+    # 1. Strip leading prefixes
+    s = re.sub(r'^(วันที่|เมื่อ|นัด|เวลา)\s*', '', s).strip()
+    # 2. Strip ISO time like T09:00:00 or T09:00:00.000Z
+    s = re.sub(r'T\d{1,2}:\d{2}(:\d{2})?.*$', '', s).strip()
+    # 3. Strip time with colon or dot: e.g. 09:30:00, 09:30, 09.30 น., 09.30น., 09.30
+    s = re.sub(r'(เวลา)?\s*\d{1,2}[:.]\d{2}([:.]\d{2})?\s*(น\.?|น)?', '', s).strip()
+    s = re.sub(r'\s*น\.\s*$', '', s).strip()
     return s
 
 
@@ -411,6 +441,9 @@ def format_thai_date(date_val: Any) -> Tuple[str, str, str]:
     if not s or s in ['-', 'N/A', 'None']:
         return '', '', ''
 
+    # Clean date string from times and prefixes first
+    s = clean_date_string(s)
+
     # Replace short Thai month names with full names
     for short_m, full_m in THAI_SHORT_MONTHS.items():
         if short_m in s:
@@ -420,8 +453,7 @@ def format_thai_date(date_val: Any) -> Tuple[str, str, str]:
     # Check if a full Thai month name is present in string
     for full_m in THAI_MONTHS:
         if full_m in s:
-            s_clean = re.sub(r'\d{1,2}:\d{1,2}(:\d{1,2})?', '', s).strip()
-            parts = [p for p in re.split(r'[-/.\s]+', s_clean) if p]
+            parts = [p for p in re.split(r'[-/.\s]+', s) if p]
             d, y = '', ''
             m = full_m
             for p in parts:
@@ -440,9 +472,8 @@ def format_thai_date(date_val: Any) -> Tuple[str, str, str]:
                         y = to_full_buddhist_year(num)
             return d, m, to_full_buddhist_year(y) if y else ''
 
-    # Numeric date parsing: remove time portion first (e.g. '00:00:00')
-    s_clean = re.sub(r'\d{1,2}:\d{1,2}(:\d{1,2})?', '', s).strip()
-    parts = [p for p in re.split(r'[-/.\s]+', s_clean) if p]
+    # Numeric date parsing
+    parts = [p for p in re.split(r'[-/.\s]+', s) if p]
 
     if len(parts) >= 3:
         p0, p1, p2 = parts[0], parts[1], parts[2]

@@ -10,6 +10,7 @@ from ui.dialogs.signatory_role_manager_dialog import SignatoryRoleManagerDialog
 from ui.dialogs.court_settings_dialog import CourtSettingsDialog
 from ui.dialogs.shortcuts_guide_dialog import ShortcutsGuideDialog
 from ui.dialogs.doc_type_select_dialog import DocTypeSelectDialog, SelectableDocTypeCard
+from ui.dialogs.about_dialog import AboutDialog
 
 __all__ = [
     "TemplateSelectDialog",
@@ -21,4 +22,5 @@ __all__ = [
     "ShortcutsGuideDialog",
     "DocTypeSelectDialog",
     "SelectableDocTypeCard",
+    "AboutDialog",
 ]

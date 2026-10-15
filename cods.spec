@@ -33,7 +33,10 @@ hiddenimports = [
     'uuid',
     'shutil',
     'json',
+    'ui.main_window',
+    'ui.components.splash_screen',
 ]
+
 
 a = Analysis(
     ['main.py'],

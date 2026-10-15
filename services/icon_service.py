@@ -149,6 +149,11 @@ SVG_PATHS: Dict[str, str] = {
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
     """,
+    "info": """
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    """,
 }
 
 DEFAULT_ICON_COLOR = "#4c1d95"

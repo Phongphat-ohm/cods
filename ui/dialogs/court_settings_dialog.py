@@ -68,37 +68,45 @@ class CourtSettingsDialog(QDialog):
         lbl_presets.setStyleSheet("font-size: 12.5px; color: #64748b; font-weight: 500;")
         f_layout.addWidget(lbl_presets)
 
-        preset_layout = QHBoxLayout()
-        preset_layout.setSpacing(8)
-        common_courts = ["ศาลแพ่ง", "ศาลแพ่งกรุงเทพใต้", "ศาลแพ่งธนบุรี", "ศาลจังหวัดนนทบุรี", "ศาลแขวงดอนเมือง"]
-        for c in common_courts:
-            btn_p = QPushButton(c)
-            btn_p.setObjectName("secondaryButtonSmall")
-            btn_p.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffffff;
-                    color: #4c1d95;
-                    border: 1px solid #ddd6fe;
-                    border-radius: 5px;
-                    font-size: 12px;
-                    padding: 4px 8px;
-                }
-                QPushButton:hover {
-                    background-color: #f5f3ff;
-                    border-color: #c4b5fd;
-                }
-                QPushButton:pressed {
-                    background-color: #ede9fe;
-                }
-                QPushButton:disabled {
-                    color: #94a3b8;
-                    border-color: #e2e8f0;
-                    background-color: #f8fafc;
-                }
-            """)
-            btn_p.clicked.connect(lambda _, name=c: self.txt_court.setText(name))
-            preset_layout.addWidget(btn_p)
-        f_layout.addLayout(preset_layout)
+        common_courts = [
+            ["ศาลแพ่ง", "ศาลแพ่งกรุงเทพใต้", "ศาลแพ่งธนบุรี"],
+            ["ศาลจังหวัดนนทบุรี", "ศาลแขวงดอนเมือง"]
+        ]
+        preset_vbox = QVBoxLayout()
+        preset_vbox.setSpacing(6)
+        for row_courts in common_courts:
+            row_layout = QHBoxLayout()
+            row_layout.setSpacing(8)
+            for c in row_courts:
+                btn_p = QPushButton(c)
+                btn_p.setObjectName("secondaryButtonSmall")
+                btn_p.setStyleSheet("""
+                    QPushButton {
+                        background-color: #ffffff;
+                        color: #4c1d95;
+                        border: 1px solid #ddd6fe;
+                        border-radius: 5px;
+                        font-size: 12px;
+                        padding: 4px 8px;
+                    }
+                    QPushButton:hover {
+                        background-color: #f5f3ff;
+                        border-color: #c4b5fd;
+                    }
+                    QPushButton:pressed {
+                        background-color: #ede9fe;
+                    }
+                    QPushButton:disabled {
+                        color: #94a3b8;
+                        border-color: #e2e8f0;
+                        background-color: #f8fafc;
+                    }
+                """)
+                btn_p.clicked.connect(lambda _, name=c: self.txt_court.setText(name))
+                row_layout.addWidget(btn_p)
+            row_layout.addStretch()
+            preset_vbox.addLayout(row_layout)
+        f_layout.addLayout(preset_vbox)
 
         layout.addWidget(frame)
 

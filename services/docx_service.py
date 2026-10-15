@@ -186,7 +186,7 @@ def replace_in_nodes(t_nodes: List[Any], replacements: Dict[str, Any]):
         for char_idx in range(len(txt)):
             char_map.append((node_idx, char_idx))
 
-    matches = list(re.finditer(r'\{{1,2}\s*([a-zA-Z0-9_๑-๙.]+)\s*\}{1,2}', full_text))
+    matches = list(re.finditer(r'\{{1,2}\s*([a-zA-Z0-9_\u0E00-\u0E7F.]+)\s*\}{1,2}', full_text))
     if not matches:
         return
 
@@ -455,6 +455,18 @@ def generate_compromise_docx(template_path: str, output_path: str, data: Dict[st
             if item.filename == 'word/document.xml' or re.match(r'^word/(header|footer)\d+\.xml$', item.filename):
                 root = etree.fromstring(buf)
 
+                # Pre-replacement: Handle judge 2 signature line removal if no judge 2
+                if item.filename == 'word/document.xml' and not j2:
+                    for tbl in root.iter():
+                        if tbl.tag.endswith('}tbl'):
+                            trs = [r for r in tbl.iter() if r.tag.endswith('}tr')]
+                            for r in trs:
+                                r_txt = ''.join(r.itertext())
+                                if 'judge_2_name' in r_txt or 'judge_๒_name' in r_txt or ('ผู้พิพากษา' in r_txt and j1 and j1 not in r_txt):
+                                    parent = r.getparent()
+                                    if parent is not None:
+                                        parent.remove(r)
+
                 # Process paragraphs and text elements
                 for p in root.iter():
                     if p.tag.endswith('}p'):
@@ -475,16 +487,6 @@ def generate_compromise_docx(template_path: str, output_path: str, data: Dict[st
                                     # Clean up FORMTEXT if present
                                     if 'FORMTEXT' in t.text:
                                         t.text = t.text.replace('FORMTEXT', '')
-
-                    # Handle judge 2 signature line if no judge 2
-                    if not j2:
-                        for tbl in root.iter():
-                            if tbl.tag.endswith('}tbl'):
-                                trs = [r for r in tbl.iter() if r.tag.endswith('}tr')]
-                                for r in trs:
-                                    r_txt = ''.join(r.itertext())
-                                    if 'judge_2_name' in r_txt or 'judge_๒_name' in r_txt or ('ผู้พิพากษา' in r_txt and j1 and j1 not in r_txt):
-                                        tbl.remove(r)
 
                 buf = etree.tostring(root, xml_declaration=True, encoding='utf-8', standalone=True)
 

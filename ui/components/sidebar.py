@@ -4,10 +4,11 @@ Official, clean, and responsive navigation panel adhering to Court of Justice st
 """
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+    QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QWidget, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal
 import storage_service
+import constants
 from icon_service import get_icon, get_pixmap, get_app_logo_pixmap
 
 
@@ -20,11 +21,13 @@ class SidebarWidget(QFrame):
     signatory_roles_requested = Signal()
     court_settings_requested = Signal()
     tutorial_requested = Signal()
+    about_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("sidebarFrame")
         self.setFixedWidth(280)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.setStyleSheet("""
             #sidebarButton[active="true"] {
                 background-color: #f5f3ff;
@@ -53,9 +56,18 @@ class SidebarWidget(QFrame):
         self.init_ui()
 
     def init_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 20, 14, 20)
-        layout.setSpacing(10)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        # ---------------------------------------------------------------------
+        # 1. FIXED TOP HEADER: Brand Logo, Title & Court Name Badge
+        # ---------------------------------------------------------------------
+        top_fixed_widget = QWidget()
+        top_fixed_widget.setObjectName("sidebarTopFixedWidget")
+        top_layout = QVBoxLayout(top_fixed_widget)
+        top_layout.setContentsMargins(14, 18, 14, 10)
+        top_layout.setSpacing(10)
 
         # Brand Header with App Logo
         h_brand = QHBoxLayout()
@@ -63,9 +75,12 @@ class SidebarWidget(QFrame):
         h_brand.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         brand_logo = QLabel()
+        brand_logo.setObjectName("sidebarBrandLogo")
         brand_logo.setPixmap(get_app_logo_pixmap(size=40))
         brand_logo.setFixedSize(40, 40)
-        brand_logo.setScaledContents(True)
+        brand_logo.setScaledContents(False)
+        brand_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        brand_logo.setStyleSheet("QLabel#sidebarBrandLogo { background: transparent; padding: 0px; border: none; }")
         h_brand.addWidget(brand_logo)
 
         v_brand_text = QVBoxLayout()
@@ -79,9 +94,9 @@ class SidebarWidget(QFrame):
         v_brand_text.addWidget(brand_sub)
         h_brand.addLayout(v_brand_text, 1)
 
-        layout.addLayout(h_brand)
+        top_layout.addLayout(h_brand)
 
-        # Court Badge Indicator
+        # Court Badge Indicator (Fixed under brand)
         self.court_badge = QFrame()
         self.court_badge.setObjectName("sidebarCourtBadge")
         cb_layout = QHBoxLayout(self.court_badge)
@@ -98,9 +113,68 @@ class SidebarWidget(QFrame):
         cb_layout.addWidget(self.lbl_court_name)
         cb_layout.addStretch()
 
-        layout.addWidget(self.court_badge)
+        top_layout.addWidget(self.court_badge)
         self.refresh_court_badge()
-        layout.addSpacing(10)
+
+        # Separator line under fixed header
+        sep_line = QFrame()
+        sep_line.setFrameShape(QFrame.Shape.HLine)
+        sep_line.setFrameShadow(QFrame.Shadow.Plain)
+        sep_line.setStyleSheet("QFrame { border: none; border-bottom: 1px solid #e2e8f0; min-height: 1px; max-height: 1px; }")
+        top_layout.addWidget(sep_line)
+
+        root_layout.addWidget(top_fixed_widget)
+
+        # ---------------------------------------------------------------------
+        # 2. SCROLLABLE NAVIGATION & SETTINGS AREA
+        # ---------------------------------------------------------------------
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setObjectName("sidebarScrollArea")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setStyleSheet("""
+            QScrollArea#sidebarScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollArea#sidebarScrollArea > QWidget > QWidget {
+                background-color: transparent;
+            }
+            QScrollArea#sidebarScrollArea QScrollBar:vertical {
+                border: none;
+                background: transparent;
+                width: 6px;
+                margin: 0px;
+                border-radius: 3px;
+            }
+            QScrollArea#sidebarScrollArea QScrollBar::handle:vertical {
+                background: #cbd5e1;
+                min-height: 24px;
+                border-radius: 3px;
+            }
+            QScrollArea#sidebarScrollArea QScrollBar::handle:vertical:hover {
+                background: #94a3b8;
+            }
+            QScrollArea#sidebarScrollArea QScrollBar::add-line:vertical,
+            QScrollArea#sidebarScrollArea QScrollBar::sub-line:vertical {
+                height: 0px;
+                border: none;
+                background: none;
+            }
+            QScrollArea#sidebarScrollArea QScrollBar::add-page:vertical,
+            QScrollArea#sidebarScrollArea QScrollBar::sub-page:vertical {
+                background: none;
+            }
+        """)
+
+        # Container widget holding scrollable items
+        content_widget = QWidget()
+        content_widget.setObjectName("sidebarContentWidget")
+        layout = QVBoxLayout(content_widget)
+        layout.setContentsMargins(14, 10, 14, 16)
+        layout.setSpacing(10)
 
         # Section 1: เมนูหลัก
         menu_title = QLabel("เมนูหลัก")
@@ -156,35 +230,39 @@ class SidebarWidget(QFrame):
         self.btn_nav_tutorial.clicked.connect(self.tutorial_requested.emit)
         layout.addWidget(self.btn_nav_tutorial)
 
-        layout.addSpacing(18)
-
-        # Section 3: ขั้นตอนการทำเอกสาร (Step Indicators)
-        lbl_steps_title = QLabel("ขั้นตอนการทำเอกสาร")
-        lbl_steps_title.setObjectName("menuSectionTitle")
-        layout.addWidget(lbl_steps_title)
-
-        self.lbl_step1 = QLabel("1. เลือกไฟล์ตารางนัด (Excel)")
-        self.lbl_step1.setObjectName("stepIndicator")
-        self.lbl_step2 = QLabel("2. เลือกคดีความ (ตารางนัด)")
-        self.lbl_step2.setObjectName("stepIndicator")
-        self.lbl_step3 = QLabel("3. เลือกประเภทเอกสาร")
-        self.lbl_step3.setObjectName("stepIndicator")
-        self.lbl_step4 = QLabel("4. ทำเอกสาร / สร้างไฟล์ Word")
-        self.lbl_step4.setObjectName("stepIndicator")
-
-        layout.addWidget(self.lbl_step1)
-        layout.addWidget(self.lbl_step2)
-        layout.addWidget(self.lbl_step3)
-        layout.addWidget(self.lbl_step4)
+        self.btn_nav_about = QPushButton("เกี่ยวกับระบบ (About)")
+        self.btn_nav_about.setObjectName("sidebarButton")
+        self.btn_nav_about.setIcon(get_icon("info", color="#4c1d95", size=18))
+        self.btn_nav_about.clicked.connect(self.about_requested.emit)
+        layout.addWidget(self.btn_nav_about)
 
         layout.addStretch()
 
-        # Offline Status Indicator
+        self.scroll_area.setWidget(content_widget)
+        root_layout.addWidget(self.scroll_area, 1)
+
+        # ---------------------------------------------------------------------
+        # 3. FIXED BOTTOM FOOTER: Green Offline Status Box & Version Footer
+        # ---------------------------------------------------------------------
+        bottom_fixed_widget = QWidget()
+        bottom_fixed_widget.setObjectName("sidebarBottomFixedWidget")
+        bottom_layout = QVBoxLayout(bottom_fixed_widget)
+        bottom_layout.setContentsMargins(14, 8, 14, 12)
+        bottom_layout.setSpacing(6)
+
+        # Separator line above bottom fixed area
+        sep_bottom = QFrame()
+        sep_bottom.setFrameShape(QFrame.Shape.HLine)
+        sep_bottom.setFrameShadow(QFrame.Shadow.Plain)
+        sep_bottom.setStyleSheet("QFrame { border: none; border-top: 1px solid #e2e8f0; min-height: 1px; max-height: 1px; margin-bottom: 4px; }")
+        bottom_layout.addWidget(sep_bottom)
+
+        # Offline Status Indicator (Green box)
         status_box = QFrame()
         status_box.setObjectName("statusBox")
-        status_box.setMinimumHeight(64)
+        status_box.setMinimumHeight(60)
         status_box_layout = QVBoxLayout(status_box)
-        status_box_layout.setContentsMargins(12, 10, 12, 10)
+        status_box_layout.setContentsMargins(12, 9, 12, 9)
         status_box_layout.setSpacing(4)
 
         status_head = QHBoxLayout()
@@ -203,23 +281,39 @@ class SidebarWidget(QFrame):
         lbl_status_desc.setWordWrap(True)
         status_box_layout.addWidget(lbl_status_desc)
 
-        layout.addWidget(status_box)
+        bottom_layout.addWidget(status_box)
+
+        # Version & About Clickable Footer
+        btn_ver_footer = QPushButton(f"{constants.APP_NAME} v{constants.APP_VERSION} • เกี่ยวกับระบบ")
+        btn_ver_footer.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ver_footer.setStyleSheet("""
+            QPushButton {
+                background: transparent;
+                border: none;
+                color: #64748b;
+                font-size: 11.5px;
+                font-weight: 500;
+                padding: 4px 6px;
+                text-align: center;
+            }
+            QPushButton:hover {
+                color: #4c1d95;
+                font-weight: 600;
+                text-decoration: underline;
+            }
+        """)
+        btn_ver_footer.clicked.connect(self.about_requested.emit)
+        bottom_layout.addWidget(btn_ver_footer)
+
+        root_layout.addWidget(bottom_fixed_widget)
 
     def set_current_step(self, step_idx: int):
-        """Update active states on sidebar buttons and step labels."""
+        """Update active states on sidebar buttons."""
         self.btn_nav_menu.setProperty("active", step_idx == 0)
         self.btn_nav_generator.setProperty("active", step_idx > 0)
         for btn in [self.btn_nav_menu, self.btn_nav_generator]:
             btn.style().unpolish(btn)
             btn.style().polish(btn)
-
-        self.lbl_step1.setProperty("current", step_idx == 1)
-        self.lbl_step2.setProperty("current", step_idx == 2)
-        self.lbl_step3.setProperty("current", step_idx == 3)
-        self.lbl_step4.setProperty("current", step_idx == 4)
-        for lbl in [self.lbl_step1, self.lbl_step2, self.lbl_step3, self.lbl_step4]:
-            lbl.style().unpolish(lbl)
-            lbl.style().polish(lbl)
 
     def refresh_court_badge(self, court_name=None):
         """Update court name badge from parameter or configuration."""

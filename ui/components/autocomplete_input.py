@@ -123,9 +123,19 @@ class JudicialAutocompleteInput(QLineEdit):
         item_height = 34
         popup_height = (item_count * item_height) + 6
 
-        # Position popup directly beneath the QLineEdit
+        # Position popup directly beneath the QLineEdit or flip above if bottom overflows screen
+        screen = self.screen() or QApplication.primaryScreen()
+        avail_geo = screen.availableGeometry() if screen else None
+
+        popup_width = max(self.width(), 220)
         global_pos = self.mapToGlobal(QPoint(0, self.height() + 2))
-        self.popup.setGeometry(global_pos.x(), global_pos.y(), max(self.width(), 220), popup_height)
+
+        if avail_geo and (global_pos.y() + popup_height > avail_geo.bottom() - 10):
+            above_y = self.mapToGlobal(QPoint(0, -popup_height - 2)).y()
+            if above_y >= avail_geo.top():
+                global_pos.setY(above_y)
+
+        self.popup.setGeometry(global_pos.x(), global_pos.y(), popup_width, popup_height)
 
         if not self.popup.isVisible():
             self.popup.show()
@@ -227,7 +237,7 @@ class JudicialAutocompleteInput(QLineEdit):
                 event.accept()
                 return
 
-            elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Tab):
+            elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
                 current_row = self.popup.list_widget.currentRow()
                 if current_row >= 0:
                     self._commit_selection(current_row)
@@ -238,6 +248,16 @@ class JudicialAutocompleteInput(QLineEdit):
                     self._commit_selection(0)
                     event.accept()
                     return
+
+            elif key == Qt.Key.Key_Tab:
+                current_row = self.popup.list_widget.currentRow()
+                if current_row >= 0:
+                    self._commit_selection(current_row)
+                else:
+                    self.hide_popup()
+                # Pass Tab event to super so Qt moves focus to the next field smoothly
+                super().keyPressEvent(event)
+                return
 
             elif key == Qt.Key.Key_Escape:
                 self.hide_popup()

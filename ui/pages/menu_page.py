@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from icon_service import get_icon, get_pixmap, get_app_logo_pixmap
 import storage_service
+from constants import APP_NAME, APP_VERSION
 
 
 class ClickableDocCard(QFrame):
@@ -34,6 +35,7 @@ class MenuPage(QWidget):
     bench_manager_requested = Signal()
     signatory_roles_requested = Signal()
     court_settings_requested = Signal()
+    about_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -328,6 +330,45 @@ class MenuPage(QWidget):
         self.btn_court.clicked.connect(self.court_settings_requested.emit)
         c4_layout.addWidget(self.btn_court, alignment=Qt.AlignmentFlag.AlignRight)
         sub_cards_layout.addWidget(self.card_court, 1, 1)
+
+        # Card 6: เกี่ยวกับระบบ (About & System Information)
+        self.card_about = QFrame()
+        self.card_about.setObjectName("menuSubCardFrame")
+        self.card_about.setStyleSheet(
+            "QFrame#menuSubCardFrame { background-color: #fcfaff; border: 1.5px solid #f3e8ff; border-radius: 10px; } "
+            "QFrame#menuSubCardFrame:hover { border-color: #d8b4fe; background-color: #ffffff; }"
+        )
+        c5_layout = QVBoxLayout(self.card_about)
+        c5_layout.setContentsMargins(20, 18, 20, 18)
+        c5_layout.setSpacing(10)
+
+        c5_header = QHBoxLayout()
+        icon5 = QLabel()
+        icon5.setPixmap(get_pixmap("info", color="#4c1d95", size=26))
+        title5 = QLabel(f"เกี่ยวกับระบบ ({APP_NAME} Offline v{APP_VERSION})")
+        title5.setObjectName("cardSubTitle")
+        c5_header.addWidget(icon5)
+        c5_header.addWidget(title5)
+        c5_header.addStretch()
+        c5_layout.addLayout(c5_header)
+
+        desc5 = QLabel("ตรวจสอบรายละเอียดเวอร์ชัน ประวัติการพัฒนา (Changelog) ความปลอดภัยข้อมูล และเปิดโฟลเดอร์ระบบ")
+        desc5.setObjectName("cardDesc")
+        desc5.setWordWrap(True)
+        c5_layout.addWidget(desc5)
+        c5_layout.addStretch()
+
+        self.btn_about = QPushButton("เกี่ยวกับระบบ... [F12]")
+        self.btn_about.setObjectName("secondaryButton")
+        self.btn_about.setIcon(get_icon("info", color="#4c1d95", size=15))
+        self.btn_about.setStyleSheet(
+            "QPushButton { background-color: #ffffff; color: #4c1d95; border: 1.5px solid #d8b4fe; border-radius: 6px; padding: 8px 16px; font-weight: 500; } "
+            "QPushButton:hover { background-color: #f3e8ff; border-color: #c084fc; }"
+        )
+        self.btn_about.setToolTip("แสดงข้อมูลเกี่ยวกับโปรแกรม ประวัติเวอร์ชัน และโฟลเดอร์ระบบ [F12]")
+        self.btn_about.clicked.connect(self.about_requested.emit)
+        c5_layout.addWidget(self.btn_about, alignment=Qt.AlignmentFlag.AlignRight)
+        sub_cards_layout.addWidget(self.card_about, 2, 0, 1, 2)
 
         layout.addLayout(sub_cards_layout)
         layout.addStretch()

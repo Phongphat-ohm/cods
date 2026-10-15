@@ -22,7 +22,8 @@ class WelcomeWizardDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("ยินดีต้อนรับสู่ CODS")
-        self.setFixedSize(680, 520)
+        self.resize(720, 540)
+        self.setMinimumSize(640, 480)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
 
         self.init_ui()
@@ -179,21 +180,21 @@ class WelcomeWizardDialog(QDialog):
         card_layout.addWidget(lbl_sub)
         layout.addWidget(card)
 
-        # Highlight Features
+        # Highlight Features with Vector SVG Icons
         features = [
-            ("⚡", "ออกรายงานกระบวนพิจารณา & คำพิพากษาตามยอม ได้ในคลิกเดียว"),
-            ("⚖️", "ระบบจำคู่องค์คณะผู้พิพากษาอัตโนมัติ ไม่ต้องกรอกชื่อซ้ำ"),
-            ("📝", "คลังแม่แบบย่อหน้า รองรับตัวแปร {{ชื่อตัวแปร}} สแกนสร้างช่องกรอกสด"),
-            ("👥", "จัดการผู้มาศาล พร้อมปุ่มจัดลำดับตามแบบพิธีการศาลไทยอัตโนมัติ")
+            ("zap", "ออกรายงานกระบวนพิจารณา & คำพิพากษาตามยอม ได้ในคลิกเดียว"),
+            ("scale", "ระบบจำคู่องค์คณะผู้พิพากษาอัตโนมัติ ไม่ต้องกรอกชื่อซ้ำ"),
+            ("file-text", "คลังแม่แบบย่อหน้า รองรับตัวแปร {{ชื่อตัวแปร}} สแกนสร้างช่องกรอกสด"),
+            ("users", "จัดการผู้มาศาล พร้อมปุ่มจัดลำดับตามแบบพิธีการศาลไทยอัตโนมัติ")
         ]
 
         feat_layout = QVBoxLayout()
         feat_layout.setSpacing(10)
-        for icon, text in features:
+        for icon_key, text in features:
             row = QHBoxLayout()
             row.setSpacing(12)
-            lbl_ico = QLabel(icon, page)
-            lbl_ico.setStyleSheet("font-size: 16px;")
+            lbl_ico = QLabel(page)
+            lbl_ico.setPixmap(icon_service.get_pixmap(icon_key, "#4c1d95", 18))
             row.addWidget(lbl_ico)
 
             lbl_txt = QLabel(text, page)

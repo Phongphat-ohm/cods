@@ -322,7 +322,7 @@ class TemplateManagerDialog(QDialog):
         else:
             self.clear_form()
             if not self.templates:
-                empty_item = QListWidgetItem("💡 ยังไม่มี Template ในระบบ\nพิมพ์ข้อมูลฝั่งขวาแล้วกด 'บันทึกเป็น Template ใหม่'")
+                empty_item = QListWidgetItem("ยังไม่มี Template ในระบบ\nพิมพ์ข้อมูลฝั่งขวาแล้วกด 'บันทึกเป็น Template ใหม่'")
                 empty_item.setFlags(Qt.ItemFlag.NoItemFlags)
                 empty_item.setForeground(Qt.GlobalColor.darkGray)
                 self.list_widget.addItem(empty_item)
