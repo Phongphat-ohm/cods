@@ -263,7 +263,13 @@ def generate_report_docx(template_path: str, output_path: str, data: Dict[str, A
             # Target main document and any headers/footers
             if item.filename == 'word/document.xml' or re.match(r'^word/(header|footer)\d+\.xml$', item.filename):
                 root = etree.fromstring(buf)
-                body = root.find(f'{{{W_NS}}}body')
+                w_ns = root.nsmap.get('w', W_NS)
+                body = root.find(f'{{{w_ns}}}body')
+                if body is None:
+                    for child in root:
+                        if child.tag.endswith('}body'):
+                            body = child
+                            break
 
                 if body is not None and item.filename == 'word/document.xml':
                     # 1. Handle paragraphs loop: {#paragraphs} ... {{.}} ... {/paragraphs}
@@ -291,7 +297,7 @@ def generate_report_docx(template_path: str, output_path: str, data: Dict[str, A
                         if paras and template_p is not None:
                             for p_text in paras:
                                 new_p = copy.deepcopy(template_p)
-                                t_nodes = list(new_p.iter(f'{{{W_NS}}}t'))
+                                t_nodes = [t for t in new_p.iter() if t.tag.endswith('}t')]
                                 replace_in_nodes(t_nodes, {'.': p_text})
                                 body.insert(insert_idx, new_p)
                                 insert_idx += 1
@@ -326,13 +332,13 @@ def generate_report_docx(template_path: str, output_path: str, data: Dict[str, A
                         if formatted_sigs and template_sig_p is not None:
                             for pos in formatted_sigs:
                                 new_sig_p = copy.deepcopy(template_sig_p)
-                                t_nodes = list(new_sig_p.iter(f'{{{W_NS}}}t'))
+                                t_nodes = [t for t in new_sig_p.iter() if t.tag.endswith('}t')]
                                 replace_in_nodes(t_nodes, {'position': pos})
                                 body.insert(insert_idx, new_sig_p)
                                 insert_idx += 1
 
                     # 3. Handle judge 2 removal / replacement (Bookmark id="2" or tag)
-                    for p in root.iter(f'{{{W_NS}}}p'):
+                    for p in [p for p in root.iter() if p.tag.endswith('}p')]:
                         txt = ''.join(p.itertext())
                         if 'judge_2_name' in txt or 'judge_๒_name' in txt:
                             if not j2:
@@ -340,25 +346,34 @@ def generate_report_docx(template_path: str, output_path: str, data: Dict[str, A
                                 bm_start_idx = None
                                 bm_end_idx = None
                                 for c_idx, c in enumerate(children):
-                                    if c.tag == f'{{{W_NS}}}bookmarkStart' and c.get(f'{{{W_NS}}}id') == '2':
+                                    if c.tag.endswith('}bookmarkStart') and any(k.endswith('}id') and v == '2' for k, v in c.attrib.items()):
                                         bm_start_idx = c_idx
-                                    elif c.tag == f'{{{W_NS}}}bookmarkEnd' and c.get(f'{{{W_NS}}}id') == '2':
+                                    elif c.tag.endswith('}bookmarkEnd') and any(k.endswith('}id') and v == '2' for k, v in c.attrib.items()):
                                         bm_end_idx = c_idx
                                 if bm_start_idx is not None and bm_end_idx is not None:
                                     for c in children[bm_start_idx + 1 : bm_end_idx]:
                                         p.remove(c)
                                 else:
-                                    t_nodes = list(p.iter(f'{{{W_NS}}}t'))
+                                    t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
                                     replace_in_nodes(t_nodes, {'judge_2_name': '', 'judge_๒_name': ''})
                             else:
-                                t_nodes = list(p.iter(f'{{{W_NS}}}t'))
+                                t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
                                 replace_in_nodes(t_nodes, {'judge_2_name': j2, 'judge_๒_name': j2})
 
+                        # Ensure no tab immediately precedes บันทึก/อ่าน to keep "(ชื่อผู้พิพากษา) บันทึก/อ่าน" close together
+                        if 'บันทึก' in txt:
+                            runs = [r for r in p if r.tag.endswith('}r')]
+                            for r_idx, r in enumerate(runs):
+                                if any(ch.tag.endswith('}tab') for ch in r):
+                                    next_txt = ''.join([''.join(sub_r.itertext()) for sub_r in runs[r_idx+1:]]).strip()
+                                    if next_txt.startswith('บันทึก'):
+                                        p.remove(r)
+
                 # 4. Replace simple tags across all paragraphs in document or header/footer
-                for p in root.iter(f'{{{W_NS}}}p'):
+                for p in [p for p in root.iter() if p.tag.endswith('}p')]:
                     txt = ''.join(p.itertext())
                     if '{' in txt:
-                        t_nodes = list(p.iter(f'{{{W_NS}}}t'))
+                        t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
                         replace_in_nodes(t_nodes, context)
 
                 buf = etree.tostring(root, xml_declaration=True, encoding='utf-8', standalone=True)

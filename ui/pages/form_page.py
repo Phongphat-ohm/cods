@@ -846,6 +846,7 @@ class FormPage(QWidget):
             "QPushButton:pressed { background-color: #3b0764; }"
         )
         self.btn_generate_compromise.clicked.connect(self.handle_generate_compromise_docx)
+        self.btn_generate_compromise.setToolTip("สร้างคำพิพากษาตามยอม (.docx) [Ctrl+S หรือ F5]")
         lay_sum.addWidget(self.btn_generate_compromise)
 
         lay_sec3_comp.addWidget(group_sum)
@@ -1733,6 +1734,13 @@ class FormPage(QWidget):
     # -------------------------------------------------------------------------
     # Word Document Generator
     # -------------------------------------------------------------------------
+    def trigger_generate_document(self):
+        """Unified entry point for document generation according to current doc_type."""
+        if getattr(self, 'doc_type', 'report') == 'compromise':
+            self.handle_generate_compromise_docx()
+        else:
+            self.handle_generate_docx()
+
     def handle_generate_docx(self):
         case_black = self.txt_case_black.text().strip()
         if not case_black:

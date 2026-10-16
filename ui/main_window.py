@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+    QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QStackedWidget, QMessageBox, QDialog, QLabel, QPushButton
 )
 from PySide6.QtCore import Qt, QTimer
@@ -255,10 +255,15 @@ class CODSMainWindow(QMainWindow):
             event.accept()
             return
 
-        # Ctrl+S or F5: Generate Word Document (in Step 4)
+        # Ctrl+S or F5: Generate Word Document
         if (modifiers == Qt.KeyboardModifier.ControlModifier and key == Qt.Key.Key_S) or key == Qt.Key.Key_F5:
             if self.current_step == 4:
-                self.page_form.handle_generate_docx()
+                self.page_form.trigger_generate_document()
+                event.accept()
+                return
+            elif self.current_step == 3:
+                self.handle_doc_type_selected(self.current_doc_type or "report")
+                self.page_form.trigger_generate_document()
                 event.accept()
                 return
 
@@ -317,6 +322,21 @@ class CODSMainWindow(QMainWindow):
                 event.accept()
                 return
 
+        # Step 3 (DocType Selection) keyboard navigation: Arrow Left/Right to choose, Enter to confirm
+        if self.current_step == 3:
+            if key in (Qt.Key.Key_Left, Qt.Key.Key_Up):
+                self.page_doc_type.select_doc_type("report")
+                event.accept()
+                return
+            elif key in (Qt.Key.Key_Right, Qt.Key.Key_Down):
+                self.page_doc_type.select_doc_type("compromise")
+                event.accept()
+                return
+            elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+                self.handle_doc_type_selected(self.current_doc_type or "report")
+                event.accept()
+                return
+
         # PageDown: Next Step / Next Section
         if key == Qt.Key.Key_PageDown:
             if self.current_step == 0:
@@ -349,7 +369,7 @@ class CODSMainWindow(QMainWindow):
                     event.accept()
                     return
                 elif self.page_form.form_section == 2:
-                    self.page_form.handle_generate_docx()
+                    self.page_form.trigger_generate_document()
                     event.accept()
                     return
 

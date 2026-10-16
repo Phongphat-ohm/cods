@@ -6,12 +6,23 @@ Provides standardized court case types, attendee roles, and judicial sorting wei
 APP_NAME = "CODS"
 APP_FULL_NAME = "CODS - Court Official Document System"
 APP_SUBTITLE = "ระบบจัดทำรายงานกระบวนพิจารณาและคำพิพากษาตามยอม"
-APP_VERSION = "1.2.0"
-APP_RELEASE_DATE = "15 ตุลาคม 2569"
+APP_VERSION = "1.2.1"
+APP_RELEASE_DATE = "16 ตุลาคม 2569"
 APP_ORGANIZATION = "Court of Justice (ศาลยุติธรรม)"
 APP_OFFLINE_COMPLIANCE = "100% Offline & Air-Gapped Certified"
 
 APP_CHANGELOG = [
+    {
+        "version": "1.2.1",
+        "date": "16 ตุลาคม 2569",
+        "highlights": [
+            "แก้ไขข้อผิดพลาด NameError: 'QApplication' ตอนอัปโหลดไฟล์ตารางนัด Excel",
+            "กู้คืนและปรับปรุงโครงสร้าง XML ไฟล์แม่แบบรายงานกระบวนพิจารณาให้เปิดกับ Microsoft Word ได้อย่างสมบูรณ์",
+            "ปรับระยะห่างหลังชื่อผู้พิพากษาเจ้าของสำนวนกับคำว่า 'บันทึก/อ่าน' ให้เว้นวรรค 1 เคาะอย่างถูกต้อง",
+            "ปรับปรุงระบบคีย์ลัด Ctrl+S, F5 และ PageDown ให้รองรับการสร้างทั้งรายงานกระบวนฯ และคำพิพากษาตามยอมอย่างถูกต้อง",
+            "เพิ่มคีย์ลัดลูกศรซ้าย/ขวา และ Enter ในขั้นตอนเลือกประเภทเอกสาร"
+        ]
+    },
     {
         "version": "1.2.0",
         "date": "15 ตุลาคม 2569",

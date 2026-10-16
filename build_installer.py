@@ -88,7 +88,7 @@ def main():
     os.chdir(root_dir)
 
     print("=" * 70)
-    print("   CODS - Inno Setup Build Automation (v1.2.0)")
+    print("   CODS - Inno Setup Build Automation (v1.2.1)")
     print("   คอมไพล์โปรแกรมจากโค้ดปัจจุบัน และสร้างตัวติดตั้ง Inno Setup")
     print("=" * 70)
     print()
@@ -161,7 +161,7 @@ def main():
         log_error("การสร้างตัวติดตั้ง Inno Setup ล้มเหลว")
         return ret_inno.returncode
 
-    out_file = root_dir / "dist_installer" / "CODS_Setup_v1.2.exe"
+    out_file = root_dir / "dist_installer" / "CODS_Setup_v1.2.1.exe"
     print()
     print("=" * 70)
     print("   [สำเร็จ 100%] สร้างตัวติดตั้ง CODS จากไฟล์ปัจจุบันเรียบร้อยแล้ว!")
