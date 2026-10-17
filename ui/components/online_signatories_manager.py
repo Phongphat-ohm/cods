@@ -21,6 +21,29 @@ from ui.components.autocomplete_input import JudicialAutocompleteInput
 from ui.components.signatories_manager import FlowLayout, get_court_tradition_weight
 
 
+class ClickableOnlineCheckBox(QCheckBox):
+    """A customized QCheckBox where clicking anywhere inside its component/badge area toggles its state."""
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setDown(True)
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.isDown():
+                self.setDown(False)
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                if self.rect().contains(pos):
+                    self.toggle()
+                    self.clicked.emit()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+
 class OnlineAttendeeRowWidget(QWidget):
     """Row widget for each attendee in the online list with an inline 'ออนไลน์' checkbox."""
     online_toggled = Signal(int, bool)
@@ -40,7 +63,7 @@ class OnlineAttendeeRowWidget(QWidget):
         layout.addWidget(self.lbl_text, 1)
 
         # Online checkbox
-        self.chk_online = QCheckBox("ออนไลน์")
+        self.chk_online = ClickableOnlineCheckBox("ออนไลน์")
         self.chk_online.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_online.setToolTip("ติ๊กเลือกหากบุคคลนี้ปรากฏตัวผ่านระบบการประชุมทางจอภาพ (หากไม่ติ๊กจะถือว่ามาศาล)")
         self.chk_online.setChecked(is_online)
@@ -193,10 +216,29 @@ class OnlineSignatoriesManagerWidget(QFrame):
         self.txt_custom_role.returnPressed.connect(self.add_custom_role)
         custom_bar.addWidget(self.txt_custom_role)
 
-        self.chk_new_online = QCheckBox("ออนไลน์")
+        self.chk_new_online = ClickableOnlineCheckBox("ออนไลน์")
         self.chk_new_online.setChecked(True)
         self.chk_new_online.setToolTip("ติ๊กเลือกหากต้องการให้รายการใหม่ที่กำลังจะเพิ่มมีสถานะเป็น 'ออนไลน์' ทันที")
-        self.chk_new_online.setStyleSheet("font-size: 13px; font-weight: 600; color: #4c1d95;")
+        self.chk_new_online.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.chk_new_online.setStyleSheet("""
+            QCheckBox {
+                font-size: 13px;
+                font-weight: 600;
+                color: #4c1d95;
+                background-color: #f5f3ff;
+                border: 1px solid #ddd6fe;
+                border-radius: 5px;
+                padding: 4px 8px;
+            }
+            QCheckBox:hover {
+                background-color: #ede9fe;
+                border-color: #c4b5fd;
+            }
+            QCheckBox::indicator {
+                width: 16px;
+                height: 16px;
+            }
+        """)
         custom_bar.addWidget(self.chk_new_online)
 
         btn_add_custom = QPushButton("เพิ่มเข้าลำดับ")

@@ -695,6 +695,10 @@ class CODSMainWindow(QMainWindow):
             return
 
         tut_key, page = key_map[step_idx]
+        if step_idx == 4 and getattr(self, 'is_online_report', False):
+            page = self.page_online_form
+            tut_key = "step_online_form"
+
         if not force and storage_service.is_tutorial_completed(tut_key):
             return
 

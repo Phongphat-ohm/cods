@@ -156,18 +156,22 @@ class TutorialOverlay(QWidget):
         self.chk_dont_show.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_dont_show.setStyleSheet("""
             QCheckBox {
-                font-size: 12px;
-                color: #64748b;
+                font-size: 13px;
+                font-weight: 600;
+                color: #4c1d95;
+                background-color: #f5f3ff;
+                border: 1px solid #ddd6fe;
+                border-radius: 5px;
+                padding: 4px 10px;
+                spacing: 6px;
+            }
+            QCheckBox:hover {
+                background-color: #ede9fe;
+                border-color: #c4b5fd;
             }
             QCheckBox::indicator {
-                width: 14px;
-                height: 14px;
-                border-radius: 3px;
-                border: 1px solid #cbd5e1;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #9333ea;
-                border-color: #9333ea;
+                width: 16px;
+                height: 16px;
             }
         """)
         bottom_layout.addWidget(self.chk_dont_show)

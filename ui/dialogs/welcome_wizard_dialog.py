@@ -380,20 +380,23 @@ class WelcomeWizardDialog(QDialog):
         self.chk_enable_tours.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_enable_tours.setStyleSheet("""
             QCheckBox {
-                font-size: 13px;
-                color: #334155;
-                font-weight: 500;
+                font-size: 13.5px;
+                font-weight: 600;
+                color: #4c1d95;
+                background-color: #f5f3ff;
+                border: 1.5px solid #ddd6fe;
+                border-radius: 7px;
+                padding: 7px 12px;
+                spacing: 8px;
                 margin-top: 10px;
             }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border-radius: 4px;
-                border: 1px solid #94a3b8;
+            QCheckBox:hover {
+                background-color: #ede9fe;
+                border-color: #c4b5fd;
             }
-            QCheckBox::indicator:checked {
-                background-color: #7e22ce;
-                border-color: #7e22ce;
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
             }
         """)
         layout.addWidget(self.chk_enable_tours)

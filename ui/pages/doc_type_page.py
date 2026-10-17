@@ -12,6 +12,29 @@ from PySide6.QtCore import Qt, Signal
 from icon_service import get_icon, get_pixmap
 
 
+class ClickableOnlineCheckBox(QCheckBox):
+    """A customized QCheckBox where clicking anywhere inside its component/badge area toggles its state."""
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setDown(True)
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.isDown():
+                self.setDown(False)
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                if self.rect().contains(pos):
+                    self.toggle()
+                    self.clicked.emit()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+
 class SelectableDocTypeCard(QFrame):
     """Interactive selectable card for document type selection with judicial styling."""
     chosen = Signal()
@@ -20,20 +43,15 @@ class SelectableDocTypeCard(QFrame):
                  desc: str, features: List[str], btn_text: str, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("selectableDocCard")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet("""
             QFrame#selectableDocCard {
                 background-color: #ffffff;
-                border: 2px solid #cbd5e1;
+                border: 1px solid #e2e8f0;
                 border-radius: 12px;
             }
             QFrame#selectableDocCard:hover {
-                border: 2px solid #5b21b6;
+                border: 1px solid #a855f7;
                 background-color: #faf5ff;
-            }
-            QFrame#selectableDocCard[active="true"] {
-                border: 2.5px solid #4c1d95;
-                background-color: #f5f3ff;
             }
         """)
 
@@ -133,27 +151,27 @@ class SelectableDocTypeCard(QFrame):
         lay.addWidget(btn)
 
     def add_online_checkbox(self, text: str = "ออนไลน์ (ดำเนินกระบวนพิจารณาผ่านจอภาพ)") -> QCheckBox:
-        """Add an online checkbox right above the action button."""
-        chk = QCheckBox(text)
+        """Add an online checkbox right above the action button, clickable across its entire component area."""
+        chk = ClickableOnlineCheckBox(text)
         chk.setCursor(Qt.CursorShape.PointingHandCursor)
         chk.setStyleSheet("""
             QCheckBox {
-                font-size: 13.5px;
-                font-weight: 600;
-                color: #4c1d95;
-                spacing: 8px;
-                padding: 7px 12px;
+                font-size: 15.5px;
+                font-weight: 700;
+                color: #3b0764;
+                spacing: 12px;
+                padding: 10px 16px;
                 background-color: #f5f3ff;
-                border: 1.5px solid #ddd6fe;
-                border-radius: 7px;
+                border: 2px solid #c4b5fd;
+                border-radius: 9px;
             }
             QCheckBox:hover {
                 background-color: #ede9fe;
-                border-color: #c4b5fd;
+                border-color: #a855f7;
             }
             QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
+                width: 22px;
+                height: 22px;
             }
         """)
         # Insert right before action button
@@ -165,11 +183,6 @@ class SelectableDocTypeCard(QFrame):
         self.setProperty("active", is_active)
         self.style().unpolish(self)
         self.style().polish(self)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.chosen.emit()
-        super().mousePressEvent(event)
 
 
 class DocTypePage(QWidget):
@@ -380,17 +393,29 @@ class DocTypePage(QWidget):
     def get_tutorial_steps(self):
         """Return tutorial steps for Step 3 (Doc Type Selection)."""
         from ui.components.tutorial_overlay import TutorialStep
-        return [
+        steps = [
             TutorialStep(
                 target=self.card_report,
                 title="รายงานกระบวนพิจารณา",
                 description="สำหรับบันทึกกระบวนพิจารณาคดีทั่วไปประจำวัน เช่น นัดพร้อม, สืบพยาน, เลื่อนคดี, ฟังคำสั่ง/คำพิพากษา พร้อมผู้มาศาลและองค์คณะ",
                 preferred_position="bottom"
-            ),
+            )
+        ]
+        if hasattr(self, 'chk_online') and self.chk_online is not None:
+            steps.append(
+                TutorialStep(
+                    target=self.chk_online,
+                    title="ออกรายงานกระบวนพิจารณาออนไลน์",
+                    description="ติ๊กเลือกช่อง 'ออนไลน์' เพื่อสลับไปใช้ระบบออกรายงานกระบวนพิจารณาออนไลน์ (สำหรับคดีที่คู่ความปรากฏตัวผ่านจอภาพ Google Meet/Zoom)",
+                    preferred_position="bottom"
+                )
+            )
+        steps.append(
             TutorialStep(
                 target=self.card_comp,
                 title="คำพิพากษาตามยอม",
                 description="สำหรับคดีที่มีการทำสัญญาประนีประนอมยอมความ รองรับการระบุข้อหาแห่งคดี สัญญาฉบับลงวันที่ และคำสั่งคืนเงินค่าขึ้นศาล",
                 preferred_position="bottom"
             )
-        ]
+        )
+        return steps

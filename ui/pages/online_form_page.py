@@ -1367,3 +1367,28 @@ class OnlineFormPage(QWidget):
         if hasattr(self, 'txt_case_black') and self.txt_case_black.text().strip():
             return True
         return False
+
+    def get_tutorial_steps(self):
+        """Return tutorial steps for Step 4 (Online Form Page)."""
+        from ui.components.tutorial_overlay import TutorialStep
+        return [
+            TutorialStep(
+                target=self.txt_judge1,
+                title="ระบบองค์คณะผู้พิพากษา (Bench Pairing)",
+                description="พิมพ์หรือเลือกชื่อผู้พิพากษาเจ้าของสำนวน เมื่อระบบพบประวัติการจับคู่ ระบบจะเติมชื่อผู้พิพากษาองค์คณะคนที่ 2 ให้อัตโนมัติ",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.btn_sec_tab2,
+                title="แท็บที่ 2: ระบบการประชุม & ผู้มาศาลออนไลน์",
+                description="สำหรับเลือกแพลตฟอร์มการประชุม (เช่น Google Meet, Zoom) และติ๊กเลือกช่อง 'ออนไลน์' ท้ายชื่อคู่ความที่ปรากฏตัวผ่านจอภาพ",
+                preferred_position="bottom"
+            ),
+            TutorialStep(
+                target=self.btn_sec_tab3,
+                title="แท็บที่ 3: ข้อความย่อหน้า & ออกรายงานออนไลน์",
+                description="สำหรับพิมพ์ข้อความกระบวนพิจารณา และกดสร้างไฟล์ Word (.docx) ตามแม่แบบรายงานกระบวนพิจารณาออนไลน์",
+                preferred_position="bottom"
+            )
+        ]
+
