@@ -6,7 +6,7 @@ Allows user to select document type (รายงานกระบวนพิ�
 from typing import List, Dict, Any, Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QScrollArea
+    QFrame, QScrollArea, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
 from icon_service import get_icon, get_pixmap
@@ -106,6 +106,8 @@ class SelectableDocTypeCard(QFrame):
 
         lay.addStretch()
 
+        self.chk_online = None
+
         # Selection Action Button
         btn = QPushButton(btn_text)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -130,6 +132,35 @@ class SelectableDocTypeCard(QFrame):
         btn.clicked.connect(self.chosen.emit)
         lay.addWidget(btn)
 
+    def add_online_checkbox(self, text: str = "ออนไลน์ (ดำเนินกระบวนพิจารณาผ่านจอภาพ)") -> QCheckBox:
+        """Add an online checkbox right above the action button."""
+        chk = QCheckBox(text)
+        chk.setCursor(Qt.CursorShape.PointingHandCursor)
+        chk.setStyleSheet("""
+            QCheckBox {
+                font-size: 13.5px;
+                font-weight: 600;
+                color: #4c1d95;
+                spacing: 8px;
+                padding: 7px 12px;
+                background-color: #f5f3ff;
+                border: 1.5px solid #ddd6fe;
+                border-radius: 7px;
+            }
+            QCheckBox:hover {
+                background-color: #ede9fe;
+                border-color: #c4b5fd;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+            }
+        """)
+        # Insert right before action button
+        self.layout().insertWidget(self.layout().count() - 1, chk)
+        self.chk_online = chk
+        return chk
+
     def set_active(self, is_active: bool):
         self.setProperty("active", is_active)
         self.style().unpolish(self)
@@ -145,12 +176,14 @@ class DocTypePage(QWidget):
     """Step 3: Choose document type for the selected case."""
 
     back_requested = Signal()
-    doc_type_selected = Signal(str)  # "report" or "compromise"
+    doc_type_selected = Signal(str, bool)  # (doc_type: "report"|"compromise", is_online: bool)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.selected_type: str = "report"
+        self.is_online_report: bool = False
         self.init_ui()
+
 
     def init_ui(self):
         root_layout = QVBoxLayout(self)
@@ -246,6 +279,8 @@ class DocTypePage(QWidget):
             ],
             btn_text="สร้างรายงานกระบวนพิจารณา"
         )
+        self.chk_online = self.card_report.add_online_checkbox("ออนไลน์ (ดำเนินกระบวนพิจารณาผ่านจอภาพ)")
+        self.chk_online.toggled.connect(self._on_online_toggled)
         self.card_report.chosen.connect(lambda: self.select_doc_type("report"))
         cards_layout.addWidget(self.card_report, 1)
 
@@ -270,6 +305,9 @@ class DocTypePage(QWidget):
 
         scroll_area.setWidget(content)
         root_layout.addWidget(scroll_area)
+
+    def _on_online_toggled(self, checked: bool):
+        self.is_online_report = checked
 
     def set_case_info(self, case_data: Dict[str, Any], mapping: Dict[str, str]):
         """Populate case summary details in banner."""
@@ -318,8 +356,14 @@ class DocTypePage(QWidget):
             parties.append(f"<b>จำเลย:</b> {defendant}")
         self.lbl_parties_summary.setText(" &nbsp;&nbsp;|&nbsp;&nbsp; ".join(parties))
 
-    def set_selected_type(self, doc_type: str):
+    def set_selected_type(self, doc_type: str, is_online: Optional[bool] = None):
         self.selected_type = doc_type
+        if is_online is not None and hasattr(self, 'chk_online'):
+            self.chk_online.blockSignals(True)
+            self.chk_online.setChecked(is_online)
+            self.chk_online.blockSignals(False)
+            self.is_online_report = is_online
+
         if doc_type == "compromise":
             self.card_comp.set_active(True)
             self.card_report.set_active(False)
@@ -329,7 +373,9 @@ class DocTypePage(QWidget):
 
     def select_doc_type(self, doc_type: str):
         self.set_selected_type(doc_type)
-        self.doc_type_selected.emit(doc_type)
+        is_online = self.is_online_report if doc_type == "report" else False
+        self.doc_type_selected.emit(doc_type, is_online)
+
 
     def get_tutorial_steps(self):
         """Return tutorial steps for Step 3 (Doc Type Selection)."""

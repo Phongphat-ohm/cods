@@ -34,6 +34,7 @@ from ui.pages.import_page import ImportPage
 from ui.pages.table_page import TablePage
 from ui.pages.doc_type_page import DocTypePage
 from ui.pages.form_page import FormPage
+from ui.pages.online_form_page import OnlineFormPage
 
 class CODSMainWindow(QMainWindow):
     """Main Application Window orchestrating navigation, state, and pages."""
@@ -55,6 +56,7 @@ class CODSMainWindow(QMainWindow):
         self.case_types_list: List[str] = list(DEFAULT_CASE_TYPES)
 
         self.current_doc_type: str = "report"
+        self.is_online_report: bool = False
 
         self.init_ui()
         self.apply_theme()
@@ -118,13 +120,21 @@ class CODSMainWindow(QMainWindow):
         self.page_doc_type.doc_type_selected.connect(self.handle_doc_type_selected)
         self.stacked_widget.addWidget(self.page_doc_type)
 
-        # Page 4: 3-Section Form & Document Generator (ทำเอกสาร)
+        # Page 4: 3-Section Form & Document Generator (ทำเอกสารปกติ / ตามยอม)
         self.page_form = FormPage(self)
         self.page_form.back_to_doc_type_requested.connect(lambda: self.go_to_step(3))
         self.page_form.back_to_table_requested.connect(lambda: self.go_to_step(2))
         self.page_form.bench_manager_requested.connect(self.open_bench_manager)
         self.page_form.court_saved_as_default.connect(self.handle_court_saved_as_default)
         self.stacked_widget.addWidget(self.page_form)
+
+        # Page 4 (Online): Dedicated Form for Online Proceedings Report (รายงานออนไลน์)
+        self.page_online_form = OnlineFormPage(self)
+        self.page_online_form.back_to_doc_type_requested.connect(lambda: self.go_to_step(3))
+        self.page_online_form.back_to_table_requested.connect(lambda: self.go_to_step(2))
+        self.page_online_form.bench_manager_requested.connect(self.open_bench_manager)
+        self.page_online_form.court_saved_as_default.connect(self.handle_court_saved_as_default)
+        self.stacked_widget.addWidget(self.page_online_form)
 
         content_layout.addWidget(self.stacked_widget, 1)
 
@@ -193,7 +203,7 @@ class CODSMainWindow(QMainWindow):
                     step_idx = 2
             if self.selected_row_data:
                 self.page_doc_type.set_case_info(self.selected_row_data, self.mapping)
-                self.page_doc_type.set_selected_type(self.current_doc_type)
+                self.page_doc_type.set_selected_type(self.current_doc_type, getattr(self, 'is_online_report', False))
         elif step_idx == 4:
             if not self.excel_rows or self.page_table.table_widget.rowCount() == 0:
                 QMessageBox.information(self, "แจ้งเตือน", "กรุณาเลือกไฟล์ Excel ในขั้นตอนที่ 1 ก่อน")
@@ -203,14 +213,22 @@ class CODSMainWindow(QMainWindow):
                 step_idx = 2
 
         self.current_step = step_idx
-        self.stacked_widget.setCurrentIndex(step_idx)
+        if step_idx == 4 and getattr(self, 'is_online_report', False):
+            self.stacked_widget.setCurrentWidget(self.page_online_form)
+        else:
+            step_widgets = [self.page_menu, self.page_import, self.page_table, self.page_doc_type, self.page_form]
+            if 0 <= step_idx < len(step_widgets):
+                self.stacked_widget.setCurrentWidget(step_widgets[step_idx])
         self.update_step_ui()
 
         # Smart Focus on transition
         if step_idx == 2:
             self.page_table.focus_search()
         elif step_idx == 4:
-            self.page_form.focus_first_field()
+            if getattr(self, 'is_online_report', False):
+                self.page_online_form.focus_first_field()
+            else:
+                self.page_form.focus_first_field()
 
         # Contextual feature onboarding / spotlight tutorial for this step
         if 0 <= step_idx <= 4:
@@ -258,12 +276,19 @@ class CODSMainWindow(QMainWindow):
         # Ctrl+S or F5: Generate Word Document
         if (modifiers == Qt.KeyboardModifier.ControlModifier and key == Qt.Key.Key_S) or key == Qt.Key.Key_F5:
             if self.current_step == 4:
-                self.page_form.trigger_generate_document()
+                if getattr(self, 'is_online_report', False):
+                    self.page_online_form.handle_generate_docx()
+                else:
+                    self.page_form.trigger_generate_document()
                 event.accept()
                 return
             elif self.current_step == 3:
-                self.handle_doc_type_selected(self.current_doc_type or "report")
-                self.page_form.trigger_generate_document()
+                is_on = getattr(self.page_doc_type, 'is_online_report', False)
+                self.handle_doc_type_selected(self.current_doc_type or "report", is_on)
+                if getattr(self, 'is_online_report', False):
+                    self.page_online_form.handle_generate_docx()
+                else:
+                    self.page_form.trigger_generate_document()
                 event.accept()
                 return
 
@@ -333,7 +358,8 @@ class CODSMainWindow(QMainWindow):
                 event.accept()
                 return
             elif key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-                self.handle_doc_type_selected(self.current_doc_type or "report")
+                is_on = getattr(self.page_doc_type, 'is_online_report', False)
+                self.handle_doc_type_selected(self.current_doc_type or "report", is_on)
                 event.accept()
                 return
 
@@ -357,27 +383,33 @@ class CODSMainWindow(QMainWindow):
                 event.accept()
                 return
             elif self.current_step == 3:
-                self.handle_doc_type_selected(self.current_doc_type or "report")
+                is_on = getattr(self.page_doc_type, 'is_online_report', False)
+                self.handle_doc_type_selected(self.current_doc_type or "report", is_on)
                 event.accept()
                 return
             elif self.current_step == 4:
-                if self.page_form.form_section < 2:
-                    if self.page_form.form_section == 0:
-                        self.page_form.handle_next_to_attendees()
+                active_form = self.page_online_form if getattr(self, 'is_online_report', False) else self.page_form
+                if active_form.form_section < 2:
+                    if hasattr(active_form, 'handle_next_to_attendees') and active_form.form_section == 0:
+                        active_form.handle_next_to_attendees()
                     else:
-                        self.page_form.set_form_section(self.page_form.form_section + 1)
+                        active_form.set_form_section(active_form.form_section + 1)
                     event.accept()
                     return
-                elif self.page_form.form_section == 2:
-                    self.page_form.trigger_generate_document()
+                elif active_form.form_section == 2:
+                    if getattr(self, 'is_online_report', False):
+                        active_form.handle_generate_docx()
+                    else:
+                        active_form.trigger_generate_document()
                     event.accept()
                     return
 
         # PageUp: Previous Step / Previous Section
         if key == Qt.Key.Key_PageUp:
             if self.current_step == 4:
-                if self.page_form.form_section > 0:
-                    self.page_form.set_form_section(self.page_form.form_section - 1)
+                active_form = self.page_online_form if getattr(self, 'is_online_report', False) else self.page_form
+                if active_form.form_section > 0:
+                    active_form.set_form_section(active_form.form_section - 1)
                     event.accept()
                     return
                 else:
@@ -528,10 +560,14 @@ class CODSMainWindow(QMainWindow):
             row = self.excel_rows[orig_idx]
             self.selected_row_data = row
             self.page_form.load_case_row(row, self.mapping)
+            if hasattr(self, 'page_online_form'):
+                self.page_online_form.load_case_row(row, self.mapping)
             if not self.page_form.txt_court_name.text().strip():
                 default_court = storage_service.get_default_court_name()
                 if default_court:
                     self.page_form.txt_court_name.setText(default_court)
+                    if hasattr(self, 'page_online_form'):
+                        self.page_online_form.txt_court_name.setText(default_court)
 
     def handle_proceed_from_table(self):
         """From Step 2 (Table), proceed to Step 3 (Select Doc Type)."""
@@ -544,18 +580,18 @@ class CODSMainWindow(QMainWindow):
                 return
 
         self.page_doc_type.set_case_info(self.selected_row_data, self.mapping)
-        self.page_doc_type.set_selected_type(self.current_doc_type)
+        self.page_doc_type.set_selected_type(self.current_doc_type, getattr(self, 'is_online_report', False))
         self.go_to_step(3)
 
     def handle_proceed_to_form(self):
         """Backwards compatibility proxy for proceed_to_form_requested."""
         self.handle_proceed_from_table()
 
-    def handle_doc_type_selected(self, doc_type: str):
+    def handle_doc_type_selected(self, doc_type: str, is_online: bool = False):
         """From Step 3 (Doc Type Selection), proceed to Step 4 (Form Wizard)."""
         self.current_doc_type = doc_type
+        self.is_online_report = is_online if doc_type == "report" else False
         self.page_table.set_doc_type(doc_type)
-        self.page_form.set_doc_type(doc_type)
 
         if not self.selected_row_data:
             orig_idx = self.page_table.get_selected_original_index()
@@ -566,12 +602,22 @@ class CODSMainWindow(QMainWindow):
                 self.go_to_step(2)
                 return
 
-        if not self.page_form.txt_court_name.text().strip():
-            default_court = storage_service.get_default_court_name()
-            if default_court:
-                self.page_form.txt_court_name.setText(default_court)
+        default_court = storage_service.get_default_court_name()
 
-        self.page_form.set_form_section(0)
+        if self.is_online_report:
+            if self.selected_row_data and self.mapping:
+                self.page_online_form.load_case_row(self.selected_row_data, self.mapping)
+            if not self.page_online_form.txt_court_name.text().strip() and default_court:
+                self.page_online_form.txt_court_name.setText(default_court)
+            self.page_online_form.set_form_section(0)
+        else:
+            self.page_form.set_doc_type(doc_type)
+            if self.selected_row_data and self.mapping:
+                self.page_form.load_case_row(self.selected_row_data, self.mapping)
+            if not self.page_form.txt_court_name.text().strip() and default_court:
+                self.page_form.txt_court_name.setText(default_court)
+            self.page_form.set_form_section(0)
+
         self.go_to_step(4)
 
     # -------------------------------------------------------------------------
@@ -581,9 +627,13 @@ class CODSMainWindow(QMainWindow):
         dlg = BenchManagerDialog(self)
         dlg.exec()
         self.page_form.refresh_judge1_completer()
+        if hasattr(self, 'page_online_form'):
+            self.page_online_form.refresh_judge1_completer()
         current_j1 = self.page_form.cmb_judge1.currentText().strip()
         if current_j1:
             self.page_form.handle_judge1_changed(current_j1)
+            if hasattr(self, 'page_online_form'):
+                self.page_online_form.handle_judge1_changed(current_j1)
 
     def open_template_manager(self):
         dlg = TemplateManagerDialog(self)

@@ -29,6 +29,9 @@ def __getattr__(name: str):
     elif name == "SignatoriesManagerWidget":
         from ui.components.signatories_manager import SignatoriesManagerWidget
         return SignatoriesManagerWidget
+    elif name == "OnlineSignatoriesManagerWidget":
+        from ui.components.online_signatories_manager import OnlineSignatoriesManagerWidget
+        return OnlineSignatoriesManagerWidget
     elif name in ("TutorialOverlay", "TutorialStep"):
         from ui.components.tutorial_overlay import TutorialOverlay, TutorialStep
         return TutorialOverlay if name == "TutorialOverlay" else TutorialStep
@@ -43,6 +46,7 @@ __all__ = [
     "DraggableListWidget",
     "ParagraphCard",
     "SignatoriesManagerWidget",
+    "OnlineSignatoriesManagerWidget",
     "TutorialOverlay",
     "TutorialStep",
     "CODSSplashScreen",

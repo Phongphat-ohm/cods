@@ -866,7 +866,44 @@ def set_default_court_name(court_name: str) -> bool:
         return True
 
 
+def get_default_online_platform() -> str:
+    """Get the saved default online meeting platform (defaults to 'Google Meet')."""
+    init_db()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT value FROM app_config WHERE key = 'default_online_platform'")
+        row = cursor.fetchone()
+        val = str(row["value"]).strip() if row and row["value"] else ""
+        return val if val else "Google Meet"
+
+
+def set_default_online_platform(platform_name: str) -> bool:
+    """Save the default online meeting platform to SQLite configuration."""
+    p_name = str(platform_name).strip() or "Google Meet"
+    init_db()
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO app_config (key, value, updated_at)
+            VALUES ('default_online_platform', ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+        """, (p_name,))
+        return True
+
+
+def get_online_platforms() -> List[str]:
+    """Return list of standard online platforms with default platform prioritized."""
+    from constants import DEFAULT_ONLINE_PLATFORMS
+    default_p = get_default_online_platform()
+    res = [default_p]
+    for p in DEFAULT_ONLINE_PLATFORMS:
+        if p.lower() != default_p.lower():
+            res.append(p)
+    return res
+
+
 # ================= Tutorial & Onboarding State =================
+
 
 def is_tutorial_completed(tutorial_key: str) -> bool:
     """

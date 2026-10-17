@@ -160,15 +160,63 @@ def format_attendees_summary(positions: List[str]) -> str:
     Format a list of attendee roles into official Thai court grammatical summary.
     Examples:
       ['โจทก์'] -> 'โจทก์'
-      ['โจทก์', 'จำเลย'] -> 'โจทก์ และจำเลย'
-      ['โจทก์', 'ทนายโจทก์', 'จำเลย'] -> 'โจทก์ ทนายโจทก์ และจำเลย'
+      ['โจทก์', 'จำเลย'] -> 'โจทก์และจำเลย'
+      ['โจทก์', 'ทนายโจทก์', 'จำเลย'] -> 'โจทก์ ทนายโจทก์ และจำเลย' / 'โจทก์ ทนายโจทก์และจำเลย'
     """
     cleaned = [p.strip() for p in positions if p.strip()]
     if not cleaned:
         return ""
     if len(cleaned) == 1:
         return cleaned[0]
-    return f"{' '.join(cleaned[:-1])} และ{cleaned[-1]}"
+    if len(cleaned) == 2:
+        return f"{cleaned[0]}และ{cleaned[1]}"
+    return f"{' '.join(cleaned[:-1])}และ{cleaned[-1]}"
+
+
+def format_online_attendees_summary(attendees: List[Any], platform: str = "Google Meet") -> str:
+    """
+    Format attendee records into Thai court grammatical summary for electronic/online hearings.
+    Handles online vs in-person attendees and incorporates the specified meeting platform.
+    Examples:
+      - Mixed: "ผู้รับมอบอำนาจช่วงโจทก์และในฐานะทนายโจทก์ปรากฏตัวผ่านระบบการประชุมทางจอภาพ Google Meet ส่วนจำเลยมาศาล"
+      - Mixed: "โจทก์และทนายโจทก์ปรากฏตัวผ่านระบบการประชุมทางจอภาพ Google Meet ส่วนจำเลยและทนายจำเลยมาศาล"
+      - All online: "โจทก์และจำเลยปรากฏตัวผ่านระบบการประชุมทางจอภาพ Google Meet"
+      - All in person: "โจทก์และจำเลยมาศาล"
+    """
+    if not attendees:
+        return ""
+
+    online_roles = []
+    in_person_roles = []
+
+    for a in attendees:
+        if isinstance(a, dict):
+            pos = str(a.get('position', '')).strip()
+            is_on = bool(a.get('is_online', False))
+        else:
+            pos = str(a).strip()
+            is_on = False
+        pos = re.sub(r'^และ\s*', '', pos).strip()
+        if not pos:
+            continue
+        if is_on:
+            online_roles.append(pos)
+        else:
+            in_person_roles.append(pos)
+
+    plat = platform.strip() if platform and platform.strip() else "Google Meet"
+
+    online_str = format_attendees_summary(online_roles)
+    in_person_str = format_attendees_summary(in_person_roles)
+
+    if online_str and in_person_str:
+        return f"{online_str}ปรากฏตัวผ่านระบบการประชุมทางจอภาพ {plat} ส่วน{in_person_str}มาศาล"
+    elif online_str:
+        return f"{online_str}ปรากฏตัวผ่านระบบการประชุมทางจอภาพ {plat}"
+    elif in_person_str:
+        return f"{in_person_str}มาศาล"
+    return ""
+
 
 
 def replace_in_nodes(t_nodes: List[Any], replacements: Dict[str, Any]):
@@ -537,4 +585,208 @@ def generate_compromise_docx(template_path: str, output_path: str, data: Dict[st
         raise e
 
     return output_path
+
+
+def generate_online_report_docx(template_path: str, output_path: str, data: Dict[str, Any]) -> str:
+    """
+    Generate a judicial online court report Word document (.docx) from template (e.g. รายงานกระบวนพิจารณาออนใลน์.docx).
+    Replaces placeholders, paragraphs loop, signatories loop (with online disclaimer for online attendees,
+    and dots for in-person attendees), and handles bench judge 2 removal if absent.
+    Atomic file writing with lock checking.
+    """
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"Template file not found: {template_path}")
+
+    # Build context dictionary with both Arabic and Thai numeral aliases
+    context: Dict[str, Any] = {}
+    for k, v in data.items():
+        val_clean = sanitize_xml_string(v)
+        context[k] = val_clean
+        k_thai = k.replace('1', '๑').replace('2', '๒')
+        context[k_thai] = val_clean
+
+    court_raw = sanitize_xml_string(data.get('court_name') or storage_service.get_default_court_name() or '').strip()
+    clean_court = re.sub(r'^ศาล\s*', '', court_raw) if court_raw.startswith('ศาล') else court_raw
+    context['court_name'] = clean_court
+    context['court'] = clean_court
+    context['ชื่อศาล'] = clean_court
+
+    j1 = sanitize_xml_string(data.get('judge_1_name', ''))
+    j2 = sanitize_xml_string(data.get('judge_2_name', ''))
+
+    paras = data.get('paragraphs', [])
+    if not isinstance(paras, list):
+        paras = [str(paras)] if paras else []
+    paras = [sanitize_xml_string(p) for p in paras if sanitize_xml_string(p).strip()]
+
+    raw_signatories = data.get('signatories', [])
+
+    zout_buf = io.BytesIO()
+
+    with zipfile.ZipFile(template_path, 'r') as zin, zipfile.ZipFile(zout_buf, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            buf = zin.read(item.filename)
+
+            if item.filename == 'word/document.xml' or re.match(r'^word/(header|footer)\d+\.xml$', item.filename):
+                root = etree.fromstring(buf)
+                w_ns = root.nsmap.get('w', W_NS)
+                body = root.find(f'{{{w_ns}}}body')
+                if body is None:
+                    for child in root:
+                        if child.tag.endswith('}body'):
+                            body = child
+                            break
+
+                if body is not None and item.filename == 'word/document.xml':
+                    # 1. Handle paragraphs loop: {#paragraphs} ... {{.}} ... {/paragraphs}
+                    cur_body = list(body)
+                    p_loop_start = None
+                    p_loop_end = None
+                    for idx, ch in enumerate(cur_body):
+                        txt = ''.join(ch.itertext())
+                        if '{#paragraphs}' in txt or '{{#paragraphs}}' in txt:
+                            p_loop_start = idx
+                        elif '{/paragraphs}' in txt or '{{/paragraphs}}' in txt:
+                            p_loop_end = idx
+                            break
+
+                    if p_loop_start is not None and p_loop_end is not None and p_loop_end >= p_loop_start:
+                        loop_elems = cur_body[p_loop_start : p_loop_end + 1]
+                        insert_idx = list(body).index(loop_elems[0])
+                        template_p = loop_elems[1] if len(loop_elems) >= 3 else None
+
+                        for elem in loop_elems:
+                            body.remove(elem)
+
+                        if paras and template_p is not None:
+                            for p_text in paras:
+                                new_p = copy.deepcopy(template_p)
+                                t_nodes = [t for t in new_p.iter() if t.tag.endswith('}t')]
+                                replace_in_nodes(t_nodes, {'.': p_text})
+                                body.insert(insert_idx, new_p)
+                                insert_idx += 1
+
+                    # 2. Handle online signatories loop: {#signatories} ... {position} ... {/signatories}
+                    cur_body = list(body)
+                    sig_loop_start = None
+                    sig_loop_end = None
+                    for idx, ch in enumerate(cur_body):
+                        txt = ''.join(ch.itertext())
+                        if '{#signatories}' in txt or '{{#signatories}}' in txt:
+                            sig_loop_start = idx
+                        elif '{/signatories}' in txt or '{{/signatories}}' in txt:
+                            sig_loop_end = idx
+                            break
+
+                    if sig_loop_start is not None and sig_loop_end is not None and sig_loop_end >= sig_loop_start:
+                        loop_elems = cur_body[sig_loop_start : sig_loop_end + 1]
+                        template_sig_p = loop_elems[1] if len(loop_elems) >= 3 else None
+                        insert_idx = list(body).index(loop_elems[0])
+
+                        if insert_idx > 0:
+                            prev_elem = body[insert_idx - 1]
+                            if prev_elem.tag.endswith('}p') and not ''.join(prev_elem.itertext()).strip():
+                                body.remove(prev_elem)
+                                insert_idx -= 1
+
+                        for elem in loop_elems:
+                            body.remove(elem)
+
+                        if raw_signatories and template_sig_p is not None:
+                            for sig in raw_signatories:
+                                if isinstance(sig, dict):
+                                    pos = str(sig.get('position', '')).strip()
+                                    is_on = bool(sig.get('is_online', False))
+                                else:
+                                    pos = str(sig).strip()
+                                    is_on = False
+                                pos = re.sub(r'^และ\s*', '', pos).strip()
+                                if not pos:
+                                    continue
+
+                                if is_on:
+                                    sig_text = f".........ไม่สามารถลงลายมือชื่อได้เนื่องจากปรากฎตัวผ่านระบบการประชุมทางจอภาพ.....{pos}"
+                                else:
+                                    sig_text = f"..............................................{pos}"
+
+                                new_sig_p = copy.deepcopy(template_sig_p)
+                                t_nodes = [t for t in new_sig_p.iter() if t.tag.endswith('}t')]
+                                replace_in_nodes(t_nodes, {'position': sig_text})
+                                body.insert(insert_idx, new_sig_p)
+                                insert_idx += 1
+
+                    # 3. Handle judge 2 removal / replacement (Bookmark id="2" or tag)
+                    for p in [p for p in root.iter() if p.tag.endswith('}p')]:
+                        txt = ''.join(p.itertext())
+                        if 'judge_2_name' in txt or 'judge_๒_name' in txt:
+                            if not j2:
+                                children = list(p)
+                                bm_start_idx = None
+                                bm_end_idx = None
+                                for c_idx, c in enumerate(children):
+                                    if c.tag.endswith('}bookmarkStart') and any(k.endswith('}id') and v == '2' for k, v in c.attrib.items()):
+                                        bm_start_idx = c_idx
+                                    elif c.tag.endswith('}bookmarkEnd') and any(k.endswith('}id') and v == '2' for k, v in c.attrib.items()):
+                                        bm_end_idx = c_idx
+                                if bm_start_idx is not None and bm_end_idx is not None:
+                                    for c in children[bm_start_idx + 1 : bm_end_idx]:
+                                        p.remove(c)
+                                else:
+                                    t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
+                                    replace_in_nodes(t_nodes, {'judge_2_name': '', 'judge_๒_name': ''})
+                            else:
+                                t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
+                                replace_in_nodes(t_nodes, {'judge_2_name': j2, 'judge_๒_name': j2})
+
+                        if 'บันทึก' in txt:
+                            runs = [r for r in p if r.tag.endswith('}r')]
+                            for r_idx, r in enumerate(runs):
+                                if any(ch.tag.endswith('}tab') for ch in r):
+                                    next_txt = ''.join([''.join(sub_r.itertext()) for sub_r in runs[r_idx+1:]]).strip()
+                                    if next_txt.startswith('บันทึก'):
+                                        p.remove(r)
+
+                # 4. Replace simple tags across all paragraphs in document or header/footer
+                for p in [p for p in root.iter() if p.tag.endswith('}p')]:
+                    txt = ''.join(p.itertext())
+                    if '{' in txt:
+                        t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
+                        replace_in_nodes(t_nodes, context)
+
+                buf = etree.tostring(root, xml_declaration=True, encoding='utf-8', standalone=True)
+
+            zout.writestr(item.filename, buf)
+
+    out_dir = os.path.dirname(os.path.abspath(output_path))
+    if out_dir and not os.path.exists(out_dir):
+        os.makedirs(out_dir, exist_ok=True)
+
+    temp_out = f"{output_path}.tmp_{uuid.uuid4().hex[:6]}"
+    try:
+        with open(temp_out, 'wb') as f:
+            f.write(zout_buf.getvalue())
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_out, output_path)
+    except PermissionError:
+        if os.path.exists(temp_out):
+            try:
+                os.remove(temp_out)
+            except OSError:
+                pass
+        raise PermissionError(
+            f"ไม่สามารถบันทึกไฟล์ได้เนื่องจากไฟล์ปลายทางกำลังถูกเปิดใช้งานอยู่:\n{output_path}\n\n"
+            f"กรุณาปิดโปรแกรม Microsoft Word ที่เปิดไฟล์นี้อยู่ แล้วลองกดบันทึกใหม่อีกครั้ง"
+        )
+    except Exception as e:
+        if os.path.exists(temp_out):
+            try:
+                os.remove(temp_out)
+            except OSError:
+                pass
+        raise e
+
+    return output_path
+
+
 

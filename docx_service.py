@@ -10,9 +10,11 @@ from services.docx_service import (
     sanitize_xml_string,
     parse_attendees_list,
     format_attendees_summary,
+    format_online_attendees_summary,
     replace_in_nodes,
     generate_report_docx,
-    generate_compromise_docx
+    generate_compromise_docx,
+    generate_online_report_docx
 )
 
 __all__ = [
@@ -24,7 +26,9 @@ __all__ = [
     "sanitize_xml_string",
     "parse_attendees_list",
     "format_attendees_summary",
+    "format_online_attendees_summary",
     "replace_in_nodes",
     "generate_report_docx",
-    "generate_compromise_docx"
+    "generate_compromise_docx",
+    "generate_online_report_docx"
 ]

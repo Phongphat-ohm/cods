@@ -6,12 +6,14 @@ from ui.pages.import_page import ImportPage
 from ui.pages.table_page import TablePage
 from ui.pages.doc_type_page import DocTypePage
 from ui.pages.form_page import FormPage
+from ui.pages.online_form_page import OnlineFormPage
 
 __all__ = [
     "MenuPage",
     "ImportPage",
     "TablePage",
     "DocTypePage",
-    "FormPage"
+    "FormPage",
+    "OnlineFormPage"
 ]
 

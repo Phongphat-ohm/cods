@@ -108,6 +108,53 @@ class CourtSettingsDialog(QDialog):
             preset_vbox.addLayout(row_layout)
         f_layout.addLayout(preset_vbox)
 
+        # Online Platform Frame Section
+        lbl_platform_sep = QFrame()
+        lbl_platform_sep.setFrameShape(QFrame.Shape.HLine)
+        lbl_platform_sep.setStyleSheet("color: #e2e8f0; margin-top: 10px; margin-bottom: 8px;")
+        f_layout.addWidget(lbl_platform_sep)
+
+        lbl_platform_title = QLabel("ระบบการประชุมออนไลน์เริ่มต้น (Default Online Meeting Platform):")
+        lbl_platform_title.setStyleSheet("font-size: 14px; font-weight: 600; color: #0f172a;")
+        f_layout.addWidget(lbl_platform_title)
+
+        self.txt_platform = QLineEdit()
+        self.txt_platform.setPlaceholderText("เช่น Google Meet, Zoom, Cisco Webex, Microsoft Teams")
+        current_plat = storage_service.get_default_online_platform()
+        self.txt_platform.setText(current_plat)
+        f_layout.addWidget(self.txt_platform)
+
+        lbl_plat_presets = QLabel("เลือกด่วนจากระบบยอดนิยม:")
+        lbl_plat_presets.setStyleSheet("font-size: 12.5px; color: #64748b; font-weight: 500;")
+        f_layout.addWidget(lbl_plat_presets)
+
+        h_plat_presets = QHBoxLayout()
+        h_plat_presets.setSpacing(8)
+        for plat_name in ["Google Meet", "Zoom", "Cisco Webex", "Microsoft Teams"]:
+            btn_plat = QPushButton(plat_name)
+            btn_plat.setObjectName("secondaryButtonSmall")
+            btn_plat.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffffff;
+                    color: #4c1d95;
+                    border: 1px solid #ddd6fe;
+                    border-radius: 5px;
+                    font-size: 12px;
+                    padding: 4px 8px;
+                }
+                QPushButton:hover {
+                    background-color: #f5f3ff;
+                    border-color: #c4b5fd;
+                }
+                QPushButton:pressed {
+                    background-color: #ede9fe;
+                }
+            """)
+            btn_plat.clicked.connect(lambda _, p=plat_name: self.txt_platform.setText(p))
+            h_plat_presets.addWidget(btn_plat)
+        h_plat_presets.addStretch()
+        f_layout.addLayout(h_plat_presets)
+
         layout.addWidget(frame)
 
         # Buttons
@@ -142,7 +189,7 @@ class CourtSettingsDialog(QDialog):
         btn_cancel.clicked.connect(self.reject)
         btn_bar.addWidget(btn_cancel)
 
-        btn_save = QPushButton("บันทึกชื่อศาลเริ่มต้น")
+        btn_save = QPushButton("บันทึกการตั้งค่า")
         btn_save.setObjectName("primaryButton")
         btn_save.setIcon(get_icon("save", color="#ffffff", size=15))
         btn_save.setStyleSheet("""
@@ -173,15 +220,21 @@ class CourtSettingsDialog(QDialog):
 
     def save_court(self):
         c_name = self.txt_court.text().strip()
+        p_name = self.txt_platform.text().strip() or "Google Meet"
         storage_service.set_default_court_name(c_name)
+        storage_service.set_default_online_platform(p_name)
+        
+        info_lines = []
         if c_name:
-            QMessageBox.information(
-                self, "บันทึกสำเร็จ",
-                f"บันทึก '{c_name}' เป็นชื่อศาลเริ่มต้นเรียบร้อยแล้ว\nระบบจะนำไปแสดงในแบบฟอร์มโดยอัตโนมัติ"
-            )
+            info_lines.append(f"ชื่อศาลเริ่มต้น: {c_name}")
         else:
-            QMessageBox.information(
-                self, "ล้างค่าสำเร็จ",
-                "ล้างชื่อศาลเริ่มต้นเรียบร้อยแล้ว (จะแสดงเป็นค่าว่างตามที่ตั้งค่าไว้)"
-            )
+            info_lines.append("ชื่อศาลเริ่มต้น: (ค่าว่าง)")
+        info_lines.append(f"ระบบประชุมออนไลน์เริ่มต้น: {p_name}")
+
+        QMessageBox.information(
+            self, "บันทึกสำเร็จ",
+            "บันทึกการตั้งค่าเรียบร้อยแล้ว:\n" + "\n".join(info_lines) +
+            "\n\nระบบจะนำไปแสดงในแบบฟอร์มโดยอัตโนมัติ"
+        )
         self.accept()
+

@@ -51,7 +51,10 @@ from services.storage_service import (
     resolve_data_dir,
     get_templates_dir,
     get_fonts_dir,
-    get_logo_path
+    get_logo_path,
+    get_default_online_platform,
+    set_default_online_platform,
+    get_online_platforms
 )
 
 __all__ = [
@@ -104,5 +107,8 @@ __all__ = [
     "resolve_data_dir",
     "get_templates_dir",
     "get_fonts_dir",
-    "get_logo_path"
+    "get_logo_path",
+    "get_default_online_platform",
+    "set_default_online_platform",
+    "get_online_platforms"
 ]

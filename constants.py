@@ -110,3 +110,14 @@ ROLE_WEIGHTS = {
     "เจ้าพนักงานคดี": 20,
     "ล่าม": 25,
 }
+
+# Standard online meeting platforms for electronic court hearings
+DEFAULT_ONLINE_PLATFORMS = [
+    "Google Meet",
+    "Zoom",
+    "Cisco Webex",
+    "Microsoft Teams",
+    "Jitsi Meet",
+    "Webex Meetings",
+]
+
