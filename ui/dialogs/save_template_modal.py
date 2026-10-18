@@ -12,6 +12,7 @@ from PySide6.QtCore import Qt
 from services import storage_service
 from services.docx_service import validate_template_variable
 from services.icon_service import get_icon, get_app_logo_icon
+from ui.components.template_chip_highlighter import TemplateChipHighlighter
 
 
 class SaveTemplateModal(QDialog):
@@ -55,8 +56,12 @@ class SaveTemplateModal(QDialog):
         layout.addWidget(lbl_preview)
 
         self.txt_content = QTextEdit()
-        self.txt_content.setPlainText(self.content)
+        cleaned_content = re.sub(r'\{\{\s*([^}]+?)\s*\}\}', r'[\1]', self.content)
+        cleaned_content = re.sub(r'\{([^{}\n]+?)\}', r'[\1]', cleaned_content)
+        cleaned_content = re.sub(r'\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]]+?)\s*\]', r'[\1]', cleaned_content)
+        self.txt_content.setPlainText(cleaned_content)
         self.txt_content.setMinimumHeight(110)
+        self.highlighter = TemplateChipHighlighter(self.txt_content)
         layout.addWidget(self.txt_content)
 
         # Quick Tip Box
@@ -74,7 +79,10 @@ class SaveTemplateModal(QDialog):
         tip_layout.setContentsMargins(8, 6, 8, 6)
         tip_layout.setSpacing(3)
 
-        lbl_tip = QLabel("<b>คำแนะนำตัวแปร:</b> สามารถใช้ <code>{{ชื่อตัวแปร}}</code> ในข้อความเพื่อสร้างช่องกรอกข้อมูลอัตโนมัติได้ (ห้ามมีช่องว่างในชื่อตัวแปร)")
+        lbl_tip = QLabel(
+            "<b>คำแนะนำชิปตัวแปร:</b> สามารถระบุประเภทได้ เช่น <code>[วันนัด:วันที่:เต็ม]</code>, <code>[เวลานัด:เวลา]</code>, <code>[จำนวนเงิน:ตัวเลข]</code> | "
+            "กด <b>Backspace</b> หลังชิปเพื่อเข้าไปแก้ไขชื่อด้านใน และเมื่อลบจนหมดตัวแปรจะหายไปอัตโนมัติ"
+        )
         lbl_tip.setTextFormat(Qt.TextFormat.RichText)
         lbl_tip.setStyleSheet("font-size: 12px; color: #166534;")
         lbl_tip.setWordWrap(True)
@@ -154,23 +162,24 @@ class SaveTemplateModal(QDialog):
             self.txt_content.setFocus()
             return
 
-        # Check for unclosed template braces
-        if content.count('{{') != content.count('}}'):
+        # Check for unclosed template braces or brackets
+        if content.count('{{') != content.count('}}') or content.count('[') != content.count(']'):
             QMessageBox.warning(
                 self, "ไวยากรณ์ตัวแปรไม่สมบูรณ์",
-                "พบเครื่องหมาย {{ หรือ }} ไม่ครบคู่ในเนื้อหา Template\nกรุณาตรวจสอบและปิดวงเล็บให้สมบูรณ์ก่อนบันทึก"
+                "พบเครื่องหมายวงเล็บตัวแปรไม่ครบคู่ในเนื้อหา Template\nกรุณาตรวจสอบและปิดวงเล็บให้สมบูรณ์ก่อนบันทึก"
             )
             self.txt_content.setFocus()
             return
 
         # Validate variables and forbidden keywords
-        matches = re.findall(r'\{\{\s*([^}]+?)\s*\}\}|\{([^{}]+?)\}', content)
-        for m1, m2 in matches:
-            tag = (m1 or m2).strip()
+        matches = re.findall(r'\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]]+?)\s*\]|\{\{\s*([^}]+?)\s*\}\}|\{([^{}]+?)\}', content)
+        for m1, m2, m3 in matches:
+            tag = (m1 or m2 or m3).strip()
+            tag = re.sub(r'^[\U0001f3f7\ufe0f\s]+', '', tag).strip()
             if not tag:
                 QMessageBox.warning(
                     self, "ไวยากรณ์ตัวแปรไม่ถูกต้อง",
-                    "พบวงเล็บตัวแปรว่างเปล่า '{{}}' ในเนื้อหา\nกรุณาระบุชื่อตัวแปรหรือลบวงเล็บออกก่อนบันทึก"
+                    "พบวงเล็บตัวแปรว่างเปล่าในเนื้อหา\nกรุณาระบุชื่อตัวแปรหรือลบวงเล็บออกก่อนบันทึก"
                 )
                 return
             is_valid, err_msg = validate_template_variable(tag)

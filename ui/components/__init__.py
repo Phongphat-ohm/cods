@@ -35,6 +35,21 @@ def __getattr__(name: str):
     elif name in ("TutorialOverlay", "TutorialStep"):
         from ui.components.tutorial_overlay import TutorialOverlay, TutorialStep
         return TutorialOverlay if name == "TutorialOverlay" else TutorialStep
+    elif name in ("TemplateChipHighlighter", "TemplateChipKeyFilter"):
+        from ui.components.template_chip_highlighter import TemplateChipHighlighter, TemplateChipKeyFilter
+        return TemplateChipHighlighter if name == "TemplateChipHighlighter" else TemplateChipKeyFilter
+    elif name == "VariableChipComponent":
+        from ui.components.variable_chip_widget import VariableChipComponent
+        return VariableChipComponent
+    elif name in ("ThaiDatePickerWidget", "TimeVariableInputWidget", "NumberVariableInputWidget", "SelectVariableInputWidget", "create_typed_variable_input"):
+        import ui.components.variable_inputs as vi
+        return getattr(vi, name)
+    elif name in ("show_date_chip_menu", "show_time_chip_menu", "show_money_chip_menu", "show_select_chip_menu", "show_text_chip_menu", "show_combined_chip_menu", "prompt_custom_variable_define"):
+        import ui.components.template_chip_menu as tcm
+        return getattr(tcm, name)
+    elif name in ("CaseInfoSectionWidget", "BenchPairingWidget", "CompromiseDetailsWidget", "ParagraphsSectionWidget", "DynamicVariablesPanel"):
+        import ui.components.form_sections as fs
+        return getattr(fs, name)
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
@@ -50,4 +65,24 @@ __all__ = [
     "TutorialOverlay",
     "TutorialStep",
     "CODSSplashScreen",
+    "TemplateChipHighlighter",
+    "TemplateChipKeyFilter",
+    "VariableChipComponent",
+    "ThaiDatePickerWidget",
+    "TimeVariableInputWidget",
+    "NumberVariableInputWidget",
+    "SelectVariableInputWidget",
+    "create_typed_variable_input",
+    "show_date_chip_menu",
+    "show_time_chip_menu",
+    "show_money_chip_menu",
+    "show_select_chip_menu",
+    "show_text_chip_menu",
+    "show_combined_chip_menu",
+    "prompt_custom_variable_define",
+    "CaseInfoSectionWidget",
+    "BenchPairingWidget",
+    "CompromiseDetailsWidget",
+    "ParagraphsSectionWidget",
+    "DynamicVariablesPanel",
 ]

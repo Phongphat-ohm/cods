@@ -78,6 +78,19 @@ def get_templates_dir() -> str:
     return local_tpl
 
 
+def get_default_templates_dir() -> str:
+    """Resolve directory containing factory default Word templates."""
+    local_def = os.path.join(get_app_dir(), "default_templates")
+    if os.path.exists(local_def) and any(f.endswith(".docx") for f in os.listdir(local_def)):
+        return local_def
+
+    bundle_def = os.path.join(get_bundle_dir(), "default_templates")
+    if os.path.exists(bundle_def) and any(f.endswith(".docx") for f in os.listdir(bundle_def)):
+        return bundle_def
+
+    return local_def
+
+
 def get_fonts_dir() -> str:
     """Resolve directory containing TrueType Kanit fonts."""
     local_fonts = os.path.join(get_app_dir(), "fonts")

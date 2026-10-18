@@ -87,8 +87,9 @@ def main():
     root_dir = Path(__file__).resolve().parent
     os.chdir(root_dir)
 
+    from constants import APP_VERSION
     print("=" * 70)
-    print("   CODS - Inno Setup Build Automation (v1.2.1)")
+    print(f"   CODS - Inno Setup Build Automation (v{APP_VERSION})")
     print("   คอมไพล์โปรแกรมจากโค้ดปัจจุบัน และสร้างตัวติดตั้ง Inno Setup")
     print("=" * 70)
     print()
@@ -130,6 +131,14 @@ def main():
             if tpl.is_file():
                 shutil.copy2(tpl, dist_templates / tpl.name)
 
+    dist_default_tpl = dist_cods / "default_templates"
+    src_default_tpl = root_dir / "default_templates"
+    if src_default_tpl.exists():
+        dist_default_tpl.mkdir(parents=True, exist_ok=True)
+        for tpl in src_default_tpl.glob("*"):
+            if tpl.is_file():
+                shutil.copy2(tpl, dist_default_tpl / tpl.name)
+
     if logo_ico.exists():
         shutil.copy2(logo_ico, dist_cods / "logo.ico")
     if logo_png.exists():
@@ -161,7 +170,8 @@ def main():
         log_error("การสร้างตัวติดตั้ง Inno Setup ล้มเหลว")
         return ret_inno.returncode
 
-    out_file = root_dir / "dist_installer" / "CODS_Setup_v1.2.1.exe"
+    from constants import APP_VERSION
+    out_file = root_dir / "dist_installer" / f"CODS_Setup_v{APP_VERSION}.exe"
     print()
     print("=" * 70)
     print("   [สำเร็จ 100%] สร้างตัวติดตั้ง CODS จากไฟล์ปัจจุบันเรียบร้อยแล้ว!")

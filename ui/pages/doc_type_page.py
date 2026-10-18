@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QFrame, QScrollArea, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
-from icon_service import get_icon, get_pixmap
+from services.icon_service import get_icon, get_pixmap
 
 
 class ClickableOnlineCheckBox(QCheckBox):
@@ -329,10 +329,10 @@ class DocTypePage(QWidget):
             self.lbl_parties_summary.setText("")
             return
 
-        black_col = mapping.get('case_black_no', '')
-        red_col = mapping.get('case_red_no', '')
-        plaintiff_col = mapping.get('plaintiff', '')
-        defendant_col = mapping.get('defendant', '')
+        black_col = mapping.get('case_black_no') or mapping.get('case_black', '')
+        red_col = mapping.get('case_red_no') or mapping.get('case_red', '')
+        plaintiff_col = mapping.get('plaintiff_name') or mapping.get('plaintiff', '')
+        defendant_col = mapping.get('defendant_name') or mapping.get('defendant', '')
         case_type_col = mapping.get('case_type', '')
         hearing_col = mapping.get('hearing_purpose', '')
 
@@ -348,6 +348,16 @@ class DocTypePage(QWidget):
             for k, v in case_data.items():
                 if 'ดำ' in k and v:
                     black_no = str(v).strip()
+                    break
+        if not plaintiff:
+            for k, v in case_data.items():
+                if 'โจทก์' in k and v:
+                    plaintiff = str(v).strip()
+                    break
+        if not defendant:
+            for k, v in case_data.items():
+                if 'จำเลย' in k and v:
+                    defendant = str(v).strip()
                     break
 
         case_parts = []

@@ -7,9 +7,9 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea, QWidget, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal
-import storage_service
+from services import storage_service
 import constants
-from icon_service import get_icon, get_pixmap, get_app_logo_pixmap
+from services.icon_service import get_icon, get_pixmap, get_app_logo_pixmap
 
 
 class SidebarWidget(QFrame):
@@ -218,9 +218,9 @@ class SidebarWidget(QFrame):
         self.btn_nav_roles.clicked.connect(self.signatory_roles_requested.emit)
         layout.addWidget(self.btn_nav_roles)
 
-        self.btn_nav_court = QPushButton("ตั้งค่าชื่อศาลเริ่มต้น")
+        self.btn_nav_court = QPushButton("ตั้งค่าข้อมูลพื้นฐาน")
         self.btn_nav_court.setObjectName("sidebarButton")
-        self.btn_nav_court.setIcon(get_icon("scale", color="#4c1d95", size=18))
+        self.btn_nav_court.setIcon(get_icon("settings", color="#4c1d95", size=18))
         self.btn_nav_court.clicked.connect(self.court_settings_requested.emit)
         layout.addWidget(self.btn_nav_court)
 

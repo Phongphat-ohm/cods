@@ -22,7 +22,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 from constants import APP_NAME, APP_VERSION
-from icon_service import get_app_logo_icon
+from services.icon_service import get_app_logo_icon
 from ui.components.splash_screen import CODSSplashScreen
 
 
@@ -34,7 +34,7 @@ def setup_global_exception_handler():
             return
         err_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
         try:
-            import storage_service
+            from services import storage_service
             log_dir = storage_service.resolve_data_dir()
             crash_file = os.path.join(log_dir, "crash.log")
             with open(crash_file, "a", encoding="utf-8") as f:
@@ -81,8 +81,39 @@ def __getattr__(name: str):
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
 
+def setup_qt_message_handler():
+    """
+    Filter out benign Windows DirectWrite font metric calculation warnings
+    (e.g., QWindowsFontEngineDirectWrite::recalcAdvances: GetDesignGlyphMetrics failed)
+    which occur on Windows when text layouts measure fallback characters.
+    """
+    from PySide6.QtCore import qInstallMessageHandler, QtMsgType
+
+    def qt_message_handler(msg_type, context, message):
+        msg_str = str(message or "")
+        if any(w in msg_str for w in ("GetDesignGlyphMetrics", "recalcAdvances", "QWindowsFontEngineDirectWrite", "setPointSize")):
+            return
+        cat_str = str(getattr(context, "category", "") or "")
+        if "qt.qpa.fonts" in cat_str or "qt.text" in cat_str:
+            return
+
+        if msg_type == QtMsgType.QtFatalMsg:
+            sys.stderr.write(f"[FATAL] {message}\n")
+        elif msg_type == QtMsgType.QtCriticalMsg:
+            sys.stderr.write(f"[CRITICAL] {message}\n")
+        elif msg_type == QtMsgType.QtWarningMsg:
+            if not any(f in msg_str for f in ("QWindowsFontEngine", "DirectWrite", "glyph", "GetDesignGlyphMetrics", "setPointSize")):
+                sys.stderr.write(f"[WARN] {message}\n")
+
+    qInstallMessageHandler(qt_message_handler)
+
+
 def main():
+    # Mute noisy internal Windows DirectWrite font warnings before Qt initializes
+    os.environ.setdefault("QT_LOGGING_RULES", "qt.qpa.fonts.warning=false;qt.text.*=false")
+
     setup_global_exception_handler()
+    setup_qt_message_handler()
 
     # High DPI rendering policy
     QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
@@ -131,7 +162,7 @@ def main():
 
         def step2_database(self):
             # Phase 2: SQLite court database verification & auto-recovery (60%)
-            import storage_service
+            from services import storage_service
             try:
                 storage_service.init_db()
                 storage_service.check_and_recover_db()

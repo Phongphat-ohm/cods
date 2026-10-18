@@ -13,8 +13,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 
-import storage_service
-from icon_service import get_icon, get_pixmap, get_app_logo_icon
+from services import storage_service
+from services.icon_service import get_icon, get_pixmap, get_app_logo_icon
+from services.template_variable_service import parse_variable_tag
+from ui.components.template_chip_highlighter import format_text_as_chips_html
 
 
 class TemplateSelectDialog(QDialog):
@@ -238,15 +240,19 @@ class TemplateSelectDialog(QDialog):
         if 0 <= row < len(self.filtered_templates):
             tpl = self.filtered_templates[row]
             cnt = tpl.get("content", "")
-            self.txt_preview.setPlainText(cnt)
-            matches = re.findall(r'\{\{\s*([^}]+?)\s*\}\}|\{([^{}]+?)\}', cnt)
+            self.txt_preview.setHtml(format_text_as_chips_html(cnt))
+            matches = re.findall(r'\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]]+?)\s*\]|\{\{\s*([^}]+?)\s*\}\}|\{([^{}]+?)\}', cnt)
             vars_found = []
-            for m1, m2 in matches:
-                t = (m1 or m2).strip()
+            for m1, m2, m3 in matches:
+                t = (m1 or m2 or m3).strip()
+                t = re.sub(r'^[\U0001f3f7\ufe0f\s]+', '', t).strip()
                 if t and not t.startswith(('#', '/')):
-                    vars_found.append(t)
+                    base_n = parse_variable_tag(t)['name'] or t
+                    vars_found.append(base_n)
             if vars_found:
-                self.lbl_preview_vars.setText(f"ตรวจพบตัวแปร: {', '.join(vars_found)} (ระบบจะสร้างช่องกรอกข้อมูลให้ในแบบฟอร์ม)")
+                unique_vars = sorted(list(set(vars_found)))
+                chips_display = "   •   ".join(unique_vars)
+                self.lbl_preview_vars.setText(f"ตรวจพบตัวแปร {len(unique_vars)} รายการ: {chips_display}")
                 self.lbl_preview_vars.setVisible(True)
             else:
                 self.lbl_preview_vars.setVisible(False)

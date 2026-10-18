@@ -18,8 +18,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QPixmap
 
 import constants
-import storage_service
-from icon_service import get_icon, get_pixmap, get_app_logo_pixmap, get_app_logo_icon
+from services import storage_service
+from services.icon_service import get_icon, get_pixmap, get_app_logo_pixmap, get_app_logo_icon
 
 
 def _open_folder_in_explorer(path: str):

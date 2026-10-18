@@ -13,7 +13,7 @@ import zipfile
 import uuid
 from typing import Dict, Any, List, Tuple, Set
 from lxml import etree
-from services import storage_service
+from services.template_variable_service import parse_variable_tag, get_variable_replace_pattern, format_number_comma
 
 W_NS = 'http://purl.oclc.org/ooxml/wordprocessingml/main'
 
@@ -38,30 +38,49 @@ SYSTEM_RESERVED_VARIABLES: Set[str] = {
 def validate_template_variable(var_name: str) -> Tuple[bool, str]:
     """
     Validate variable syntax and check against forbidden keywords.
+    Supports typed variables (e.g. 'วันนัด:date:full' or 'วันนัด:วันที่:ย่อ').
     Returns (is_valid, error_message).
     """
     if not var_name or not var_name.strip():
         return False, "ชื่อตัวแปรว่างเปล่า (เช่น {{}})"
     name = var_name.strip()
 
+    # If it contains colons (type/format specification), split and validate base name and type
+    parts = [p.strip() for p in name.split(':') if p.strip()]
+    base_name = parts[0] if parts else ""
+    if not base_name:
+        return False, "ชื่อตัวแปรว่างเปล่า"
+
     # Check loop control keywords (forbidden as custom input variable)
-    clean_tag = name.lstrip('#/').strip()
+    clean_tag = base_name.lstrip('#/').strip()
     if clean_tag.lower() in {k.lower() for k in FORBIDDEN_CONTROL_KEYWORDS}:
-        return False, f"คำว่า '{name}' เป็นคำสั่งสงวนโครงสร้างเอกสารของระบบ ห้ามใช้เป็นตัวแปร"
+        return False, f"คำว่า '{base_name}' เป็นคำสั่งสงวนโครงสร้างเอกสารของระบบ ห้ามใช้เป็นตัวแปร"
 
-    # Check invalid characters
-    invalid_chars = ['<', '>', '&', '"', "'", '/', '\\', '?', '*', ':', '|']
+    # Check invalid characters in base name
+    invalid_chars = ['<', '>', '&', '"', "'", '/', '\\', '?', '*', '|']
     for ch in invalid_chars:
-        if ch in name:
-            return False, f"ชื่อตัวแปร '{name}' มีอักขระต้องห้าม '{ch}' ที่อาจทำให้ไฟล์ Word เสียหาย"
+        if ch in base_name:
+            return False, f"ชื่อตัวแปร '{base_name}' มีอักขระต้องห้าม '{ch}' ที่อาจทำให้ไฟล์ Word เสียหาย"
 
-    # Check spaces inside variable name
-    if ' ' in name or '\t' in name or '\n' in name:
-        return False, f"ชื่อตัวแปร '{name}' ห้ามมีเว้นวรรค (ควรใช้ขีดล่าง '_' เช่น '{{ข้อหา_แห่งคดี}}')"
+    # Check spaces inside variable base name
+    if ' ' in base_name or '\t' in base_name or '\n' in base_name:
+        return False, f"ชื่อตัวแปร '{base_name}' ห้ามมีเว้นวรรค (ควรใช้ขีดล่าง '_' เช่น '{{ข้อหา_แห่งคดี}}')"
 
     # Check basic character validity (Thai, English, numbers, underscore)
-    if not re.match(r'^[a-zA-Z0-9_\u0E00-\u0E7F]+$', name):
-        return False, f"ชื่อตัวแปร '{name}' มีรูปแบบอักขระที่ไม่ถูกต้อง"
+    if not re.match(r'^[a-zA-Z0-9_\u0E00-\u0E7F]+$', base_name):
+        return False, f"ชื่อตัวแปร '{base_name}' มีรูปแบบอักขระที่ไม่ถูกต้อง"
+
+    # Validate type if specified
+    if len(parts) >= 2:
+        from services.template_variable_service import INPUT_TYPES
+        type_str = parts[1].lower()
+        valid_types = set()
+        for t_k, t_v in INPUT_TYPES.items():
+            valid_types.add(t_k.lower())
+            for al in t_v['aliases']:
+                valid_types.add(al.lower())
+        if type_str not in valid_types:
+            return False, f"ประเภทข้อมูล '{parts[1]}' ไม่ถูกต้อง (ประเภทที่รองรับ: วันที่, เวลา, ตัวเลข, ตัวเลือก, ข้อความ)"
 
     return True, ""
 
@@ -102,20 +121,22 @@ def extract_and_categorize_template_variables(docx_path: str) -> Dict[str, Any]:
     for tag in sorted(list(raw_tags)):
         # Skip loop control tags
         clean_tag = tag.lstrip('#/').strip()
-        if clean_tag in FORBIDDEN_CONTROL_KEYWORDS:
+        base_tag = clean_tag.split(':')[0].strip()
+        if base_tag in FORBIDDEN_CONTROL_KEYWORDS or clean_tag in FORBIDDEN_CONTROL_KEYWORDS:
             continue
 
         # Check if it's a known system variable
-        if clean_tag in SYSTEM_RESERVED_VARIABLES:
-            if clean_tag not in result['system_variables']:
-                result['system_variables'].append(clean_tag)
+        if base_tag in SYSTEM_RESERVED_VARIABLES or clean_tag in SYSTEM_RESERVED_VARIABLES:
+            target_sys = base_tag if base_tag in SYSTEM_RESERVED_VARIABLES else clean_tag
+            if target_sys not in result['system_variables']:
+                result['system_variables'].append(target_sys)
             continue
 
-        # Validate custom variable
+        # Validate custom variable (with type if provided)
         is_valid, err_msg = validate_template_variable(clean_tag)
         if is_valid:
-            if clean_tag not in result['custom_variables']:
-                result['custom_variables'].append(clean_tag)
+            if base_tag not in result['custom_variables']:
+                result['custom_variables'].append(base_tag)
         else:
             result['errors'].append(err_msg)
 
@@ -234,15 +255,30 @@ def replace_in_nodes(t_nodes: List[Any], replacements: Dict[str, Any]):
         for char_idx in range(len(txt)):
             char_map.append((node_idx, char_idx))
 
-    matches = list(re.finditer(r'\{{1,2}\s*([a-zA-Z0-9_\u0E00-\u0E7F.]+)\s*\}{1,2}', full_text))
+    matches = list(re.finditer(
+        r'\{{1,2}\s*([^}\n]+?)\s*\}{1,2}|\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]\n]+?)\s*\]',
+        full_text
+    ))
     if not matches:
         return
 
     # Process matches in reverse to maintain indexing
     for m in reversed(matches):
-        tag = m.group(1).strip()
+        tag = (m.group(1) or m.group(2) or '').strip()
+        base_tag = tag.split(':')[0].strip()
+        val = None
         if tag in replacements:
             val = sanitize_xml_string(replacements[tag])
+        elif base_tag in replacements:
+            val = sanitize_xml_string(replacements[base_tag])
+
+        if val is not None:
+            tag_lower = (tag or "").lower()
+            base_lower = (base_tag or "").lower()
+            num_indicators = ('number', 'currency', 'เงิน', 'บาท', 'จำนวน', 'ยอด', 'ราคา', 'ทุนทรัพย์', 'ดอกเบี้ย')
+            if any(ind in tag_lower or ind in base_lower for ind in num_indicators):
+                val = sanitize_xml_string(format_number_comma(val))
+
             start, end = m.start(), m.end()
             start_node_idx, start_char_idx = char_map[start]
             end_node_idx, end_char_idx = char_map[end - 1]
@@ -420,7 +456,7 @@ def generate_report_docx(template_path: str, output_path: str, data: Dict[str, A
                 # 4. Replace simple tags across all paragraphs in document or header/footer
                 for p in [p for p in root.iter() if p.tag.endswith('}p')]:
                     txt = ''.join(p.itertext())
-                    if '{' in txt:
+                    if '{' in txt or '[' in txt:
                         t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
                         replace_in_nodes(t_nodes, context)
 
@@ -533,9 +569,11 @@ def generate_compromise_docx(template_path: str, output_path: str, data: Dict[st
                 # Process paragraphs and text elements
                 for p in root.iter():
                     if p.tag.endswith('}p'):
-                        t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
-                        if t_nodes:
-                            replace_in_nodes(t_nodes, context)
+                        txt = ''.join(p.itertext())
+                        if '{' in txt or '[' in txt:
+                            t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
+                            if t_nodes:
+                                replace_in_nodes(t_nodes, context)
 
                 # Post-replacement cleanup for leftover template artifacts in document.xml
                 if item.filename == 'word/document.xml':
@@ -749,7 +787,7 @@ def generate_online_report_docx(template_path: str, output_path: str, data: Dict
                 # 4. Replace simple tags across all paragraphs in document or header/footer
                 for p in [p for p in root.iter() if p.tag.endswith('}p')]:
                     txt = ''.join(p.itertext())
-                    if '{' in txt:
+                    if '{' in txt or '[' in txt:
                         t_nodes = [t for t in p.iter() if t.tag.endswith('}t')]
                         replace_in_nodes(t_nodes, context)
 

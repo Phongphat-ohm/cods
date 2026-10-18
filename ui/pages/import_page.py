@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
-from icon_service import get_icon, get_pixmap
+from services.icon_service import get_icon, get_pixmap
 
 
 class DragDropUploadFrame(QFrame):

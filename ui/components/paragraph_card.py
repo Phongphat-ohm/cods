@@ -7,13 +7,18 @@ import re
 from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTextEdit, QFrame, QMessageBox
+    QTextEdit, QFrame, QMessageBox, QMenu, QInputDialog, QLineEdit
 )
-from PySide6.QtCore import Qt, Signal, QEvent, QMimeData
+from PySide6.QtCore import Qt, Signal, QEvent, QMimeData, QTimer
 from PySide6.QtGui import QDrag
 from services.icon_service import get_icon, get_pixmap
 from ui.dialogs.template_select_dialog import TemplateSelectDialog
 from ui.components.draggable_list import DraggableListWidget
+from ui.components.template_chip_highlighter import TemplateChipHighlighter
+from ui.components.variable_chip_widget import VariableChipComponent
+from services.template_variable_service import get_variable_replace_pattern, parse_variable_tag, format_number_comma
+from ui.dialogs.variable_define_dialog import VariableDefineDialog
+from ui.components.template_chip_menu import show_combined_chip_menu, prompt_custom_variable_define
 
 
 class ParagraphCard(QFrame):
@@ -26,6 +31,7 @@ class ParagraphCard(QFrame):
     delete_requested = Signal(object)
     reorder_requested = Signal(int, int)  # (source_1based_index, target_1based_index)
     text_changed = Signal()
+    chip_value_changed = Signal(str, str)  # (var_name, new_val)
 
     def __init__(self, index: int = 1, text: str = "", parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -96,6 +102,32 @@ class ParagraphCard(QFrame):
             }
         """
 
+        self.btn_insert_chip = QPushButton("+ แทรกตัวแปร (Chip)")
+        self.btn_insert_chip.setObjectName("cardMiniButton")
+        self.btn_insert_chip.setStyleSheet("""
+            QPushButton {
+                background-color: #f5f3ff;
+                color: #4c1d95;
+                border: 1.5px solid #c4b5fd;
+                border-radius: 5px;
+                padding: 4px 10px;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #ede9fe;
+                border-color: #8b5cf6;
+                color: #3b0764;
+            }
+            QPushButton:pressed {
+                background-color: #ddd6fe;
+            }
+        """)
+        self.btn_insert_chip.setIcon(get_icon("tag", color="#4c1d95", size=14))
+        self.btn_insert_chip.setToolTip("แทรกชิปตัวแปร {{...}} ลงในข้อความ เพื่อให้กรอกข้อมูลได้สะดวก")
+        self.btn_insert_chip.clicked.connect(self.show_chip_menu)
+        header_bar.addWidget(self.btn_insert_chip)
+
         self.btn_insert_tpl = QPushButton("แทรก Template")
         self.btn_insert_tpl.setObjectName("cardMiniButton")
         self.btn_insert_tpl.setStyleSheet(btn_mini_style)
@@ -160,18 +192,138 @@ class ParagraphCard(QFrame):
 
         # Paragraph Text Editor
         self.txt_editor = QTextEdit()
-        self.txt_editor.setPlaceholderText(f"ระบุข้อความกระบวนพิจารณาสำหรับย่อหน้าที่ {self.index}...")
-        self.txt_editor.setMinimumHeight(130)
-        self.txt_editor.setPlainText(initial_text)
+        self.txt_editor.setPlaceholderText(f"ระบุข้อความกระบวนพิจารณาสำหรับย่อหน้าที่ {self.index}... (กดปุ่ม '+ แทรกตัวแปร' เพื่อแทรกชิปตัวแปรอัตโนมัติ)")
+        cleaned_init = re.sub(r'\{\{\s*([^}]+?)\s*\}\}', r'[\1]', initial_text)
+        cleaned_init = re.sub(r'\{([^{}\n]+?)\}', r'[\1]', cleaned_init)
+        cleaned_init = re.sub(r'\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]]+?)\s*\]', r'[\1]', cleaned_init)
+        self.txt_editor.setPlainText(cleaned_init)
         self.txt_editor.textChanged.connect(self._on_internal_text_changed)
+        
+        # Install Visual Chip Syntax Highlighter & Interactive Key Filter
+        self.highlighter = TemplateChipHighlighter(self.txt_editor)
         layout.addWidget(self.txt_editor)
 
-        # Variables badge indicator below editor
-        self.lbl_vars_badge = QLabel()
-        self.lbl_vars_badge.setStyleSheet("font-size: 13px; color: #4c1d95; background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 6px 12px; font-weight: 500;")
-        self.lbl_vars_badge.setVisible(False)
-        layout.addWidget(self.lbl_vars_badge)
+        # -------------------------------------------------------------
+        # Interactive Variable Chips & Quick Fill Panel
+        # -------------------------------------------------------------
+        self.var_panel = QFrame()
+        self.var_panel.setObjectName("paragraphVarChipsPanel")
+        self.var_panel.setStyleSheet("""
+            QFrame#paragraphVarChipsPanel {
+                background-color: #faf5ff;
+                border: 1.5px solid #ddd6fe;
+                border-radius: 8px;
+                padding: 10px;
+            }
+        """)
+        self.var_panel_layout = QVBoxLayout(self.var_panel)
+        self.var_panel_layout.setContentsMargins(10, 8, 10, 8)
+        self.var_panel_layout.setSpacing(8)
+
+        # Header for variables panel
+        var_head = QHBoxLayout()
+        var_head.setSpacing(6)
+        lbl_chip_icon = QLabel()
+        lbl_chip_icon.setPixmap(get_pixmap("tag", color="#6b21a8", size=15))
+        lbl_var_title = QLabel("ตัวแปรใน Template นี้ (กรอกข้อมูลเพื่อแทนที่คำอัตโนมัติ):")
+        lbl_var_title.setStyleSheet("font-size: 13px; font-weight: 700; color: #581c87;")
+        var_head.addWidget(lbl_chip_icon)
+        var_head.addWidget(lbl_var_title)
+        var_head.addStretch()
+
+        self.btn_apply_chips = QPushButton("แทนที่ทั้งหมดในข้อความ")
+        self.btn_apply_chips.setIcon(get_icon("check", color="#ffffff", size=13))
+        self.btn_apply_chips.setStyleSheet("""
+            QPushButton {
+                background-color: #6b21a8;
+                color: #ffffff;
+                border-radius: 4px;
+                padding: 4px 12px;
+                font-size: 12px;
+                font-weight: 600;
+                border: none;
+            }
+            QPushButton:hover { background-color: #7e22ce; }
+            QPushButton:pressed { background-color: #581c87; }
+        """)
+        self.btn_apply_chips.setToolTip("นำค่าที่กรอกในกล่องตัวแปรทั้งหมดไปแทนที่ในย่อหน้านี้ทันที")
+        self.btn_apply_chips.clicked.connect(self.apply_variable_values)
+        var_head.addWidget(self.btn_apply_chips)
+        self.var_panel_layout.addLayout(var_head)
+
+        # Container for variable chip component widgets
+        self.chips_container = QVBoxLayout()
+        self.chips_container.setSpacing(6)
+        self.var_panel_layout.addLayout(self.chips_container)
+
+        self.chip_components: dict[str, VariableChipComponent] = {}
+        self.var_inputs: dict[str, QLineEdit] = {}
+        layout.addWidget(self.var_panel)
         self._update_vars_badge()
+
+    def show_chip_menu(self):
+        """Display quick menu to pick or create template variable chips with formats."""
+        show_combined_chip_menu(self.btn_insert_chip, self, self.insert_variable_chip)
+
+    def prompt_custom_chip(self, initial_type: str = "date"):
+        """Open rich VariableDefineDialog to configure variable with input type and date format."""
+        prompt_custom_variable_define(self, self.insert_variable_chip, initial_type)
+
+    def insert_variable_chip(self, var_name: str):
+        """Insert [var_name] into txt_editor at current cursor position without raw {{}}."""
+        chip_text = f"[{var_name}]"
+        cursor = self.txt_editor.textCursor()
+        cursor.insertText(chip_text)
+        self.txt_editor.setTextCursor(cursor)
+        self.txt_editor.setFocus()
+
+    def apply_single_chip_value(self, var_name: str, value: str):
+        """Replace a single variable in txt_editor immediately using type-aware regex."""
+        val = value.strip()
+        if not val:
+            return
+        meta = parse_variable_tag(var_name)
+        if meta.get('type') == 'number' or any(k in var_name for k in ('เงิน', 'บาท', 'จำนวน', 'ยอด', 'ราคา', 'ทุนทรัพย์', 'ดอกเบี้ย')):
+            val = format_number_comma(val)
+        current_text = self.get_text()
+        base_name = meta['name']
+        pattern = get_variable_replace_pattern(base_name)
+        if pattern.search(current_text):
+            current_text = pattern.sub(val, current_text)
+            self.set_text(current_text)
+            self._update_vars_badge()
+            self.text_changed.emit()
+
+    def apply_variable_values(self):
+        """Replace all variables with values typed in the variable chip widgets immediately."""
+        current_text = self.get_text()
+        replaced = False
+        for var_name, comp in self.chip_components.items():
+            val = comp.get_value()
+            if val:
+                meta = parse_variable_tag(var_name)
+                if meta.get('type') == 'number' or any(k in var_name for k in ('เงิน', 'บาท', 'จำนวน', 'ยอด', 'ราคา', 'ทุนทรัพย์', 'ดอกเบี้ย')):
+                    val = format_number_comma(val)
+                base_name = getattr(comp, 'base_name', meta['name'])
+                pattern = get_variable_replace_pattern(base_name)
+                if pattern.search(current_text):
+                    current_text = pattern.sub(val, current_text)
+                    replaced = True
+        
+        if replaced:
+            self.set_text(current_text)
+            self._update_vars_badge()
+            self.text_changed.emit()
+            if hasattr(self, 'btn_apply_chips'):
+                b = self.btn_apply_chips
+                b.setText("แทนที่เรียบร้อย")
+                b.setIcon(get_icon("check", color="#ffffff", size=13))
+                b.setStyleSheet("background-color: #16a34a; color: #ffffff; border-radius: 4px; padding: 4px 12px; font-size: 12px; font-weight: 600; border: none;")
+                QTimer.singleShot(1500, lambda: (
+                    b.setText("แทนที่ทั้งหมดในข้อความ"),
+                    b.setIcon(get_icon("check", color="#ffffff", size=13)),
+                    b.setStyleSheet("background-color: #6b21a8; color: #ffffff; border-radius: 4px; padding: 4px 12px; font-size: 12px; font-weight: 600; border: none;")
+                ))
 
     def _on_internal_text_changed(self):
         self._update_vars_badge()
@@ -179,17 +331,76 @@ class ParagraphCard(QFrame):
 
     def _update_vars_badge(self):
         txt = self.get_text()
-        matches = re.findall(r'\{\{\s*([^}]+?)\s*\}\}|\{([^{}]+?)\}', txt)
+        matches = re.findall(r'\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]]+?)\s*\]|\{\{\s*([^}]+?)\s*\}\}|\{([^{}]+?)\}', txt)
         vars_found = []
-        for m1, m2 in matches:
-            t = (m1 or m2).strip()
+        for m1, m2, m3 in matches:
+            t = (m1 or m2 or m3).strip()
+            t = re.sub(r'^[\U0001f3f7\ufe0f\s]+', '', t).strip()
             if t and not t.startswith(('#', '/')):
                 vars_found.append(t)
-        if vars_found:
-            self.lbl_vars_badge.setText(f"ตรวจพบตัวแปรในย่อหน้านี้: {', '.join(vars_found)} (ระบบสร้างช่องกรอกข้อมูลให้ด้านบน)")
-            self.lbl_vars_badge.setVisible(True)
-        else:
-            self.lbl_vars_badge.setVisible(False)
+
+        unique_vars = sorted(list(set(vars_found)))
+        
+        # If no variables, hide the panel
+        if not unique_vars:
+            self.var_panel.setVisible(False)
+            self.chip_components.clear()
+            self.var_inputs.clear()
+            return
+
+        # Keep existing typed values
+        saved_values = {}
+        for k, comp in self.chip_components.items():
+            saved_values[k] = comp.get_value()
+        for k, edt in self.var_inputs.items():
+            if k not in saved_values:
+                saved_values[k] = edt.text()
+
+        # Clear layout
+        while self.chips_container.count():
+            item = self.chips_container.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                while item.layout().count():
+                    sub = item.layout().takeAt(0)
+                    if sub.widget():
+                        sub.widget().deleteLater()
+
+        self.chip_components.clear()
+        self.var_inputs.clear()
+
+        # Check sibling cards or parent page if saved_values doesn't have it
+        p = self.parent()
+        for v in unique_vars:
+            base_v = parse_variable_tag(v)['name']
+            val = saved_values.get(v, "") or saved_values.get(base_v, "")
+            if not val and p and hasattr(p, 'paragraph_cards'):
+                for other_card in p.paragraph_cards:
+                    if other_card is not self and hasattr(other_card, 'chip_components'):
+                        for c_key, c_comp in other_card.chip_components.items():
+                            c_base = parse_variable_tag(c_key)['name']
+                            if c_key == v or c_base == base_v:
+                                cand = c_comp.get_value()
+                                if cand:
+                                    val = cand
+                                    break
+            if not val and p and hasattr(p, 'dynamic_inputs'):
+                target_inp = p.dynamic_inputs.get(v) or p.dynamic_inputs.get(base_v)
+                if target_inp:
+                    val = target_inp.text() if hasattr(target_inp, 'text') else getattr(target_inp, 'get_value', lambda: '')()
+
+            chip_comp = VariableChipComponent(v, val, parent=self.var_panel)
+            chip_comp.apply_requested.connect(self.apply_single_chip_value)
+            chip_comp.value_changed.connect(lambda var_n, val: self.chip_value_changed.emit(var_n, val))
+            self.chip_components[v] = chip_comp
+            if base_v and base_v not in self.chip_components:
+                self.chip_components[base_v] = chip_comp
+            self.var_inputs[v] = chip_comp.txt_value
+            self.chips_container.addWidget(chip_comp)
+
+        self.var_panel.setVisible(True)
+
 
     def eventFilter(self, source, event):
         if source == self.drag_grip:
@@ -257,7 +468,11 @@ class ParagraphCard(QFrame):
         return self.txt_editor.toPlainText().strip()
 
     def set_text(self, text: str):
-        self.txt_editor.setPlainText(text)
+        # Clean any legacy {{var}} or [var] to standard chip syntax [var]
+        cleaned = re.sub(r'\{\{\s*([^}]+?)\s*\}\}', r'[\1]', text)
+        cleaned = re.sub(r'\{([^{}\n]+?)\}', r'[\1]', cleaned)
+        cleaned = re.sub(r'\[\s*(?:\U0001f3f7\ufe0f)?\s*([^\]]+?)\s*\]', r'[\1]', cleaned)
+        self.txt_editor.setPlainText(cleaned)
 
     def handle_insert_template(self):
         dlg = TemplateSelectDialog(self)

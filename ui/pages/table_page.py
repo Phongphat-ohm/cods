@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (
     QMessageBox, QStackedLayout
 )
 from PySide6.QtCore import Qt, Signal
-from icon_service import get_icon, get_pixmap
-import storage_service
+from services.icon_service import get_icon, get_pixmap
+from services import storage_service
 
 
 class TablePage(QWidget):

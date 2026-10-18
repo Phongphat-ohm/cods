@@ -17,10 +17,10 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QKeyEvent
 
 from constants import DEFAULT_CASE_TYPES, APP_NAME, APP_VERSION
-from excel_service import read_excel_data, guess_column_mapping
-import storage_service
-from icon_service import get_app_logo_icon
-from dialogs import (
+from services.excel_service import read_excel_data, guess_column_mapping
+from services import storage_service
+from services.icon_service import get_app_logo_icon, get_icon, get_pixmap
+from ui.dialogs import (
     TemplateManagerDialog, BenchManagerDialog, SignatoryRoleManagerDialog,
     CourtSettingsDialog, ShortcutsGuideDialog, AboutDialog
 )
@@ -660,6 +660,12 @@ class CODSMainWindow(QMainWindow):
             if hasattr(self.sidebar, 'refresh_court_badge'):
                 self.sidebar.refresh_court_badge(default_court)
 
+    def open_template_recovery(self, tpl_key: Optional[str] = None):
+        """Open the Word Template Diagnostic and Recovery Dialog."""
+        from ui.dialogs.template_recovery_dialog import TemplateRecoveryDialog
+        dlg = TemplateRecoveryDialog(self, initial_tpl_key=tpl_key)
+        dlg.exec()
+
     def open_about_dialog(self):
         """Open About dialog displaying system specs, version, changelog, and directories."""
         dlg = AboutDialog(self)
@@ -735,7 +741,8 @@ class CODSMainWindow(QMainWindow):
         lbl_desc.setStyleSheet("font-size: 13px; color: #64748b;")
         layout.addWidget(lbl_desc)
 
-        btn_wizard = QPushButton("🌟 เริ่มทัวร์แนะนำโปรแกรม (Welcome Wizard)", dlg)
+        btn_wizard = QPushButton("เริ่มทัวร์แนะนำโปรแกรม (Welcome Wizard)", dlg)
+        btn_wizard.setIcon(get_icon("play-circle", color="#6b21a8", size=18))
         btn_wizard.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_wizard.setStyleSheet("""
             QPushButton {
@@ -756,7 +763,8 @@ class CODSMainWindow(QMainWindow):
         btn_wizard.clicked.connect(lambda: (dlg.accept(), self.open_welcome_wizard()))
         layout.addWidget(btn_wizard)
 
-        btn_library_tour = QPushButton("📚 แนะนำเมนูคลังข้อมูลและการตั้งค่า (Settings & Library Tour)", dlg)
+        btn_library_tour = QPushButton("แนะนำเมนูคลังข้อมูลและการตั้งค่า (Settings & Library Tour)", dlg)
+        btn_library_tour.setIcon(get_icon("book-open", color="#6b21a8", size=18))
         btn_library_tour.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_library_tour.setStyleSheet("""
             QPushButton {
@@ -777,7 +785,8 @@ class CODSMainWindow(QMainWindow):
         btn_library_tour.clicked.connect(lambda: (dlg.accept(), self.go_to_step(0), self.show_step_tutorial(0, force=True)))
         layout.addWidget(btn_library_tour)
 
-        btn_spotlight = QPushButton("💡 เริ่มแนะนำหน้าจอปัจจุบัน (Spotlight Tour)", dlg)
+        btn_spotlight = QPushButton("เริ่มแนะนำหน้าจอปัจจุบัน (Spotlight Tour)", dlg)
+        btn_spotlight.setIcon(get_icon("lightbulb", color="#334155", size=18))
         btn_spotlight.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_spotlight.setStyleSheet("""
             QPushButton {
@@ -798,7 +807,8 @@ class CODSMainWindow(QMainWindow):
         btn_spotlight.clicked.connect(lambda: (dlg.accept(), self.show_step_tutorial(self.current_step, force=True)))
         layout.addWidget(btn_spotlight)
 
-        btn_shortcuts = QPushButton("⌨️ คู่มือปุ่มลัดคีย์บอร์ดทั้งหมด (Shortcuts Guide)", dlg)
+        btn_shortcuts = QPushButton("คู่มือปุ่มลัดคีย์บอร์ดทั้งหมด (Shortcuts Guide)", dlg)
+        btn_shortcuts.setIcon(get_icon("keyboard", color="#334155", size=18))
         btn_shortcuts.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_shortcuts.setStyleSheet("""
             QPushButton {
@@ -819,7 +829,8 @@ class CODSMainWindow(QMainWindow):
         btn_shortcuts.clicked.connect(lambda: (dlg.accept(), self.open_shortcuts_guide()))
         layout.addWidget(btn_shortcuts)
 
-        btn_reset = QPushButton("🔄 รีเซ็ตการแนะนำทั้งหมด (เริ่มแสดงคำแนะนำใหม่ทุกหน้า)", dlg)
+        btn_reset = QPushButton("รีเซ็ตการแนะนำทั้งหมด (เริ่มแสดงคำแนะนำใหม่ทุกหน้า)", dlg)
+        btn_reset.setIcon(get_icon("rotate-ccw", color="#be123c", size=18))
         btn_reset.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_reset.setStyleSheet("""
             QPushButton {

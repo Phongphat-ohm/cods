@@ -14,6 +14,7 @@ project_dir = os.path.abspath(SPECPATH)
 datas = [
     (os.path.join(project_dir, 'fonts'), 'fonts'),
     (os.path.join(project_dir, 'templates'), 'templates'),
+    (os.path.join(project_dir, 'default_templates'), 'default_templates'),
     (os.path.join(project_dir, 'logo.png'), '.'),
     (os.path.join(project_dir, 'logo.ico'), '.'),
 ]

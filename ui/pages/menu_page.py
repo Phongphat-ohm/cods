@@ -7,8 +7,8 @@ from PySide6.QtWidgets import (
     QMessageBox, QScrollArea
 )
 from PySide6.QtCore import Qt, Signal
-from icon_service import get_icon, get_pixmap, get_app_logo_pixmap
-import storage_service
+from services.icon_service import get_icon, get_pixmap, get_app_logo_pixmap
+from services import storage_service
 from constants import APP_NAME, APP_VERSION
 
 
@@ -292,7 +292,7 @@ class MenuPage(QWidget):
         c_roles_layout.addWidget(self.btn_roles, alignment=Qt.AlignmentFlag.AlignRight)
         sub_cards_layout.addWidget(self.card_roles, 1, 0)
 
-        # Card 5: ตั้งค่าชื่อศาลเริ่มต้น
+        # Card 5: ตั้งค่าข้อมูลพื้นฐาน
         self.card_court = QFrame()
         self.card_court.setObjectName("menuSubCardFrame")
         self.card_court.setStyleSheet(
@@ -305,8 +305,8 @@ class MenuPage(QWidget):
 
         c4_header = QHBoxLayout()
         icon4 = QLabel()
-        icon4.setPixmap(get_pixmap("scale", color="#4c1d95", size=26))
-        title4 = QLabel("ตั้งค่าชื่อศาลเริ่มต้น")
+        icon4.setPixmap(get_pixmap("settings", color="#4c1d95", size=26))
+        title4 = QLabel("ตั้งค่าข้อมูลพื้นฐาน")
         title4.setObjectName("cardSubTitle")
         c4_header.addWidget(icon4)
         c4_header.addWidget(title4)
@@ -320,9 +320,9 @@ class MenuPage(QWidget):
         c4_layout.addWidget(self.lbl_menu_court_desc)
         c4_layout.addStretch()
 
-        self.btn_court = QPushButton("ตั้งค่าชื่อศาล...")
+        self.btn_court = QPushButton("ตั้งค่าข้อมูลพื้นฐาน...")
         self.btn_court.setObjectName("secondaryButton")
-        self.btn_court.setIcon(get_icon("scale", color="#4c1d95", size=15))
+        self.btn_court.setIcon(get_icon("settings", color="#4c1d95", size=15))
         self.btn_court.setStyleSheet(
             "QPushButton { background-color: #ffffff; color: #4c1d95; border: 1.5px solid #d8b4fe; border-radius: 6px; padding: 8px 16px; font-weight: 500; } "
             "QPushButton:hover { background-color: #f3e8ff; border-color: #c084fc; }"
@@ -389,11 +389,12 @@ class MenuPage(QWidget):
 
     def update_court_description(self, court_name=None):
         c = court_name if court_name is not None else storage_service.get_default_court_name()
+        plat = storage_service.get_default_online_platform() or "Google Meet"
         if c:
-            self.lbl_menu_court_desc.setText(f"กำหนดชื่อศาลเริ่มต้นไว้คือ: '{c}' (แสดงในแบบฟอร์มให้อัตโนมัติ)")
+            self.lbl_menu_court_desc.setText(f"ศาลเริ่มต้น: '{c}' • ประชุมออนไลน์: {plat} (แสดงในแบบฟอร์มให้อัตโนมัติ)")
             self.lbl_menu_court_desc.setStyleSheet("font-size: 13px; color: #16a34a; font-weight: 500;")
         else:
-            self.lbl_menu_court_desc.setText("ยังไม่ได้กำหนดชื่อศาลเริ่มต้น กดปุ่มเพื่อกำหนดชื่อศาลที่จะให้ระบบเติมให้อัตโนมัติ")
+            self.lbl_menu_court_desc.setText(f"ยังไม่ได้กำหนดชื่อศาลเริ่มต้น • ประชุมออนไลน์: {plat} (คลิกเพื่อกำหนดค่า)")
             self.lbl_menu_court_desc.setStyleSheet("font-size: 13px; color: #475569;")
 
     def get_tutorial_steps(self):
@@ -411,7 +412,7 @@ class MenuPage(QWidget):
             steps.append(TutorialStep(
                 target=self.card_tpl,
                 title="2. คลัง Template ย่อหน้าส่วนตัว",
-                description="คลังเก็บแบบข้อความกระบวนพิจารณาที่ท่านสร้างขึ้นเอง สามารถใส่ตัวแปร {{ชื่อตัวแปร}} เพื่อให้ระบบสแกนสร้างช่องกรอกข้อมูลให้อัตโนมัติในหน้าทำเอกสาร",
+                description="คลังเก็บแบบข้อความกระบวนพิจารณาที่ท่านสร้างขึ้นเอง สามารถใส่ชิปตัวแปร [ชื่อตัวแปร] เพื่อให้ระบบสแกนสร้างช่องกรอกข้อมูลให้อัตโนมัติในหน้าทำเอกสาร",
                 preferred_position="top"
             ))
         if hasattr(self, 'card_bench') and self.card_bench:
@@ -431,8 +432,8 @@ class MenuPage(QWidget):
         if hasattr(self, 'card_court') and self.card_court:
             steps.append(TutorialStep(
                 target=self.card_court,
-                title="5. ตั้งค่าชื่อศาลเริ่มต้น",
-                description="กำหนดชื่อศาลเริ่มต้นที่จะปรากฏบนหัวรายงานกระบวนพิจารณาและเอกสารทุกฉบับ ไม่ต้องพิมพ์ซ้ำทุกครั้ง",
+                title="5. ตั้งค่าข้อมูลพื้นฐาน",
+                description="กำหนดข้อมูลพื้นฐานประจำเครื่อง เช่น ชื่อศาลเริ่มต้น และระบบการประชุมออนไลน์เริ่มต้น ที่จะนำไปแสดงในแบบฟอร์มเอกสารให้อัตโนมัติ",
                 preferred_position="top"
             ))
         return steps

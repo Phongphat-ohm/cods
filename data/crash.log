@@ -1,0 +1,11 @@
+
+--- CRASH AT 2026-10-18T19:14:51.478901 ---
+Traceback (most recent call last):
+  File "D:\.PHONGPHAT\งาน\jads\jads-python\main.py", line 146, in step3_modules
+    from ui.main_window import CODSMainWindow
+  File "D:\.PHONGPHAT\งาน\jads\jads-python\ui\main_window.py", line 23, in <module>
+    from ui.dialogs import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'AboutDialog' from 'ui.dialogs' (D:\.PHONGPHAT\งาน\jads\jads-python\ui\dialogs\__init__.py)
+

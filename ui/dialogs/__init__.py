@@ -11,6 +11,9 @@ from ui.dialogs.court_settings_dialog import CourtSettingsDialog
 from ui.dialogs.shortcuts_guide_dialog import ShortcutsGuideDialog
 from ui.dialogs.doc_type_select_dialog import DocTypeSelectDialog, SelectableDocTypeCard
 from ui.dialogs.welcome_wizard_dialog import WelcomeWizardDialog
+from ui.dialogs.variable_define_dialog import VariableDefineDialog
+from ui.dialogs.about_dialog import AboutDialog
+from ui.dialogs.template_recovery_dialog import TemplateRecoveryDialog
 
 __all__ = [
     "TemplateSelectDialog",
@@ -23,4 +26,7 @@ __all__ = [
     "DocTypeSelectDialog",
     "SelectableDocTypeCard",
     "WelcomeWizardDialog",
+    "VariableDefineDialog",
+    "AboutDialog",
+    "TemplateRecoveryDialog",
 ]

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QFrame, QMessageBox
 )
 from services import storage_service
-from services.icon_service import get_icon, get_app_logo_icon
+from services.icon_service import get_icon, get_pixmap, get_app_logo_icon
 
 
 class CourtSettingsDialog(QDialog):
@@ -16,7 +16,7 @@ class CourtSettingsDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("ตั้งค่าชื่อศาลเริ่มต้น - CODS")
+        self.setWindowTitle("ตั้งค่าข้อมูลพื้นฐาน - CODS")
         self.setWindowIcon(get_app_logo_icon())
         self.resize(600, 400)
         self.init_ui()
@@ -27,13 +27,13 @@ class CourtSettingsDialog(QDialog):
         layout.setSpacing(16)
 
         # Header
-        lbl_title = QLabel("ตั้งค่าชื่อศาลเริ่มต้น (Default Court)")
+        lbl_title = QLabel("ตั้งค่าข้อมูลพื้นฐาน (Basic Settings)")
         lbl_title.setStyleSheet("font-size: 19px; font-weight: 700; color: #4c1d95;")
         layout.addWidget(lbl_title)
 
         lbl_desc = QLabel(
-            "กำหนดชื่อศาลเริ่มต้นประจำเครื่อง ระบบจะนำชื่อนี้ไปแสดงในแบบฟอร์มรายงานกระบวนพิจารณาโดยอัตโนมัติ "
-            "ทุกครั้งที่เปิดโปรแกรมหรือเลือกคดีความจากตาราง (ไม่ต้องพิมพ์ใหม่ทุกครั้ง)"
+            "กำหนดข้อมูลพื้นฐานประจำเครื่อง เช่น ชื่อศาลเริ่มต้น และระบบการประชุมออนไลน์เริ่มต้น "
+            "เพื่อนำไปแสดงในแบบฟอร์มเอกสารโดยอัตโนมัติ (ไม่ต้องพิมพ์ใหม่ทุกครั้ง)"
         )
         lbl_desc.setWordWrap(True)
         lbl_desc.setStyleSheet("font-size: 13px; color: #475569; line-height: 1.5;")
@@ -157,6 +157,55 @@ class CourtSettingsDialog(QDialog):
 
         layout.addWidget(frame)
 
+        # Template Diagnostics & Recovery Section
+        frame_tpl = QFrame()
+        frame_tpl.setObjectName("courtSettingsTplFrame")
+        frame_tpl.setStyleSheet("""
+            QFrame#courtSettingsTplFrame {
+                background-color: #f8fafc;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 8px;
+            }
+        """)
+        f_tpl_layout = QHBoxLayout(frame_tpl)
+        f_tpl_layout.setContentsMargins(16, 12, 16, 12)
+        f_tpl_layout.setSpacing(12)
+
+        icon_tpl = QLabel()
+        icon_tpl.setPixmap(get_pixmap("file-text", color="#4c1d95", size=24))
+        f_tpl_layout.addWidget(icon_tpl)
+
+        v_tpl = QVBoxLayout()
+        v_tpl.setSpacing(2)
+        lbl_tpl_title = QLabel("ระบบตรวจสอบและกู้คืนแม่แบบเอกสาร Word (.docx)")
+        lbl_tpl_title.setStyleSheet("font-size: 13.5px; font-weight: 600; color: #0f172a;")
+        lbl_tpl_desc = QLabel("ตรวจสอบความถูกต้อง ตรวจหาตัวแปรที่ขาดหาย หรือกู้คืนแม่แบบเดิมของโปรแกรม")
+        lbl_tpl_desc.setStyleSheet("font-size: 12px; color: #64748b;")
+        v_tpl.addWidget(lbl_tpl_title)
+        v_tpl.addWidget(lbl_tpl_desc)
+        f_tpl_layout.addLayout(v_tpl, 1)
+
+        btn_open_recovery = QPushButton("ตรวจสอบ/กู้คืนแม่แบบ...")
+        btn_open_recovery.setObjectName("secondaryButtonSmall")
+        btn_open_recovery.setStyleSheet("""
+            QPushButton {
+                background-color: #ffffff;
+                color: #4c1d95;
+                border: 1.5px solid #d8b4fe;
+                border-radius: 6px;
+                padding: 6px 14px;
+                font-size: 12.5px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #f3e8ff;
+            }
+        """)
+        btn_open_recovery.clicked.connect(self.open_template_recovery)
+        f_tpl_layout.addWidget(btn_open_recovery)
+
+        layout.addWidget(frame_tpl)
+
         # Buttons
         btn_bar = QHBoxLayout()
         btn_bar.addStretch()
@@ -237,4 +286,10 @@ class CourtSettingsDialog(QDialog):
             "\n\nระบบจะนำไปแสดงในแบบฟอร์มโดยอัตโนมัติ"
         )
         self.accept()
+
+    def open_template_recovery(self):
+        from ui.dialogs.template_recovery_dialog import TemplateRecoveryDialog
+        dlg = TemplateRecoveryDialog(self)
+        dlg.exec()
+
 

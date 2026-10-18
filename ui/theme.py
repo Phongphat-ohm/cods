@@ -40,12 +40,42 @@ COLOR_INFO_BG = "#e0f2fe"           # Blue 100 (Info surface)
 
 
 def load_application_fonts() -> None:
-    """Load bundled Kanit font files into Qt Font Database."""
+    """Load bundled Kanit font files into Qt Font Database with Regular priority."""
     from services.storage_service import get_fonts_dir
     fonts_dir = get_fonts_dir()
     if fonts_dir and os.path.exists(fonts_dir):
+        # Prioritize standard weights: Regular must be loaded first so that the primary
+        # family default style is Regular (weight 400), not Black (weight 900)
+        priority_files = [
+            "Kanit-Regular.ttf",
+            "Kanit-Medium.ttf",
+            "Kanit-SemiBold.ttf",
+            "Kanit-Bold.ttf",
+            "Kanit-Italic.ttf",
+            "Kanit-MediumItalic.ttf",
+            "Kanit-SemiBoldItalic.ttf",
+            "Kanit-BoldItalic.ttf",
+            "Kanit-Light.ttf",
+            "Kanit-LightItalic.ttf",
+            "Kanit-ExtraBold.ttf",
+            "Kanit-ExtraBoldItalic.ttf",
+            "Kanit-Black.ttf",
+            "Kanit-BlackItalic.ttf",
+            "Kanit-ExtraLight.ttf",
+            "Kanit-ExtraLightItalic.ttf",
+            "Kanit-Thin.ttf",
+            "Kanit-ThinItalic.ttf"
+        ]
+        loaded = set()
+        for fname in priority_files:
+            fpath = os.path.join(fonts_dir, fname)
+            if os.path.exists(fpath):
+                QFontDatabase.addApplicationFont(fpath)
+                loaded.add(fname)
+
+        # Load any remaining font files if present
         for f in os.listdir(fonts_dir):
-            if f.lower().endswith((".ttf", ".otf")):
+            if f.lower().endswith((".ttf", ".otf")) and f not in loaded:
                 QFontDatabase.addApplicationFont(os.path.join(fonts_dir, f))
 
 
@@ -54,6 +84,8 @@ def get_default_font(size: int = 11) -> QFont:
     font = QFont()
     font.setFamilies(["Kanit", "Sarabun", "Segoe UI", "Tahoma", "sans-serif"])
     font.setPointSize(size)
+    font.setWeight(QFont.Weight.Normal)
+    font.setStyleHint(QFont.StyleHint.SansSerif)
     return font
 
 
@@ -65,7 +97,7 @@ def get_application_stylesheet() -> str:
     return """
         QWidget {
             font-family: 'Kanit', 'Sarabun', 'Segoe UI', 'Tahoma', sans-serif;
-            font-size: 15px;
+            font-size: 11pt;
             color: #0f172a;
         }
 
@@ -371,7 +403,28 @@ def get_application_stylesheet() -> str:
             border: 1px solid #cbd5e1;
         }
 
-        /* Generic QPushButton Focus and Disabled Base States */
+        /* Base QPushButton: Ensures every button across every dialog and widget has a crisp, visible border */
+        QPushButton {
+            font-family: 'Kanit', 'Sarabun', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            background-color: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 7px 16px;
+            min-height: 20px;
+            outline: none;
+        }
+        QPushButton:hover {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+        QPushButton:pressed {
+            background-color: #f1f5f9;
+            border-color: #64748b;
+        }
         QPushButton:focus {
             border: 2px solid #7c3aed;
             outline: none;
@@ -852,5 +905,185 @@ def get_application_stylesheet() -> str:
         #shortcutHelpButton:focus {
             border: 2px solid #7c3aed;
             outline: none;
+        }
+
+        /* ========================================================================= */
+        /* Alert & Confirmation Dialogs (QMessageBox)                                */
+        /* ========================================================================= */
+        QMessageBox {
+            background-color: #ffffff;
+        }
+        QMessageBox QLabel {
+            font-family: 'Kanit', 'Sarabun', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 14.5px;
+            color: #0f172a;
+            line-height: 1.5;
+            background-color: transparent;
+            padding: 6px 12px;
+        }
+        QMessageBox QPushButton {
+            font-family: 'Kanit', 'Sarabun', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            min-width: 90px;
+            min-height: 24px;
+            padding: 8px 20px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            background-color: #ffffff;
+            color: #334155;
+            outline: none;
+        }
+        QMessageBox QPushButton:hover {
+            background-color: #f8fafc;
+            border: 1.5px solid #7c3aed;
+            color: #4c1d95;
+        }
+        QMessageBox QPushButton:pressed {
+            background-color: #ede9fe;
+            border: 1.5px solid #5b21b6;
+            color: #3b0764;
+        }
+        QMessageBox QPushButton:focus {
+            border: 2px solid #7c3aed;
+        }
+        /* Primary / Default action button in QMessageBox (e.g. Yes, OK, Save) */
+        QMessageBox QPushButton:default {
+            background-color: #4c1d95;
+            color: #ffffff;
+            border: 1.5px solid #3b0764;
+            font-weight: 600;
+        }
+        QMessageBox QPushButton:default:hover {
+            background-color: #5b21b6;
+            border-color: #4c1d95;
+            color: #ffffff;
+        }
+        QMessageBox QPushButton:default:pressed {
+            background-color: #3b0764;
+            border-color: #2e0854;
+            color: #ffffff;
+        }
+        QMessageBox QPushButton:default:focus {
+            border: 2px solid #a855f7;
+        }
+
+        /* ========================================================================= */
+        /* Standard Dialogs & Button Boxes (QDialogButtonBox)                        */
+        /* ========================================================================= */
+        QDialogButtonBox QPushButton {
+            font-family: 'Kanit', 'Sarabun', 'Segoe UI', 'Tahoma', sans-serif;
+            font-size: 13.5px;
+            font-weight: 600;
+            min-width: 85px;
+            min-height: 22px;
+            padding: 7px 18px;
+            border-radius: 6px;
+            border: 1.5px solid #cbd5e1;
+            background-color: #ffffff;
+            color: #334155;
+            outline: none;
+        }
+        QDialogButtonBox QPushButton:hover {
+            background-color: #f8fafc;
+            border-color: #7c3aed;
+            color: #4c1d95;
+        }
+        QDialogButtonBox QPushButton:pressed {
+            background-color: #ede9fe;
+            border-color: #5b21b6;
+            color: #3b0764;
+        }
+        QDialogButtonBox QPushButton:default {
+            background-color: #4c1d95;
+            color: #ffffff;
+            border: 1.5px solid #3b0764;
+            font-weight: 600;
+        }
+        QDialogButtonBox QPushButton:default:hover {
+            background-color: #5b21b6;
+            border-color: #4c1d95;
+        }
+        QDialogButtonBox QPushButton:default:pressed {
+            background-color: #3b0764;
+            border-color: #2e0854;
+        }
+
+        /* ========================================================================= */
+        /* High-Contrast Court Calendar Widget (QCalendarWidget)                     */
+        /* ========================================================================= */
+        QCalendarWidget {
+            background-color: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        QCalendarWidget QWidget#qt_calendar_navigationbar {
+            background-color: #f5f3ff;
+            border-bottom: 1.5px solid #ddd6fe;
+            border-top-left-radius: 7px;
+            border-top-right-radius: 7px;
+            min-height: 38px;
+        }
+        QCalendarWidget QToolButton {
+            color: #4c1d95;
+            background-color: #ffffff;
+            border: 1.5px solid #d8b4fe;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            margin: 2px 3px;
+            padding: 3px 8px;
+        }
+        QCalendarWidget QToolButton:hover {
+            background-color: #ede9fe;
+            border-color: #7c3aed;
+        }
+        QCalendarWidget QToolButton:pressed {
+            background-color: #ddd6fe;
+        }
+        QCalendarWidget QHeaderView::section {
+            background-color: #faf5ff;
+            color: #4c1d95;
+            font-weight: 700;
+            font-size: 12px;
+            padding: 5px 0px;
+            border: none;
+            border-bottom: 1.5px solid #e9d5ff;
+        }
+        QCalendarWidget QTableView {
+            background-color: #ffffff;
+            alternate-background-color: #faf5ff;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 500;
+            selection-background-color: #7c3aed;
+            selection-color: #ffffff;
+            gridline-color: #f8fafc;
+            border: none;
+            outline: none;
+        }
+        QCalendarWidget QTableView:item:hover {
+            background-color: #ede9fe;
+            color: #4c1d95;
+        }
+        QCalendarWidget QTableView:item:selected {
+            background-color: #7c3aed;
+            color: #ffffff;
+            font-weight: 700;
+        }
+        QCalendarWidget QSpinBox {
+            background-color: #ffffff;
+            color: #4c1d95;
+            font-weight: 700;
+            border: 1.5px solid #d8b4fe;
+            border-radius: 6px;
+            padding: 2px 4px;
+        }
+        QCalendarWidget QMenu {
+            background-color: #ffffff;
+            color: #0f172a;
+            border: 1.5px solid #ddd6fe;
+            border-radius: 6px;
+            padding: 4px;
         }
     """

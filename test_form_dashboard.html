@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CODS Court - ระบบบันทึกและจับเวลาการตรวจสอบระบบ (Manual Test Runner)</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #3b82f6;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --info: #0284c7;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --font-family: 'Kanit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-family);
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
+      color: white;
+      padding: 24px 32px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .header-title h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .header-title p {
+      font-size: 14px;
+      color: #93c5fd;
+    }
+
+    .header-session {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .session-input {
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      font-weight: 500;
+    }
+
+    /* Dashboard Metrics Cards */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+
+    .metric-card.total::before { background: var(--info); }
+    .metric-card.passed::before { background: var(--success); }
+    .metric-card.failed::before { background: var(--danger); }
+    .metric-card.rate::before { background: var(--primary-light); }
+    .metric-card.time::before { background: var(--warning); }
+
+    .metric-title {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .metric-val {
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Control Bar */
+    .controls-panel {
+      background: var(--card-bg);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      background: #f1f5f9;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .filter-btn.active.failed {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: #172554; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #15803d; }
+    .btn-outline { background: white; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { background: #f8fafc; }
+
+    /* Failure Banner / Summary Box */
+    .failure-summary-box {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+
+    .failure-summary-box.visible {
+      display: block;
+    }
+
+    .failure-summary-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--danger);
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .failure-summary-list {
+      list-style-type: disc;
+      padding-left: 24px;
+      font-size: 14px;
+      color: #991b1b;
+    }
+
+    /* Test Cases Table */
+    .table-container {
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13.5px;
+      vertical-align: top;
+    }
+
+    tr:hover {
+      background-color: #fcfdfe;
+    }
+
+    tr.failed-row {
+      background-color: #fff5f5;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-critical { background: #fee2e2; color: #b91c1c; }
+    .badge-high { background: #ffedd5; color: #c2410c; }
+    .badge-medium { background: #fef9c3; color: #a16207; }
+    .badge-low { background: #f1f5f9; color: #475569; }
+
+    /* Stopwatch Widget */
+    .timer-widget {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 130px;
+    }
+
+    .timer-display {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      background: #f1f5f9;
+      padding: 4px 8px;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid #cbd5e1;
+    }
+
+    .timer-display.running {
+      background: #eff6ff;
+      color: var(--primary-light);
+      border-color: #93c5fd;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .timer-actions {
+      display: flex;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .btn-timer {
+      padding: 3px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-timer:hover { background: #f8fafc; }
+    .btn-timer.start { color: var(--success); border-color: #bbf7d0; }
+    .btn-timer.pause { color: var(--warning); border-color: #fde68a; }
+    .btn-timer.reset { color: var(--text-muted); }
+
+    /* Form Status Select */
+    .status-select {
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .status-select.passed { background: #dcfce7; color: #15803d; border-color: #86efac; }
+    .status-select.failed { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+    .status-select.blocked { background: #fef3c7; color: #b45309; border-color: #fde68a; }
+    .status-select.pending { background: #f8fafc; color: #64748b; }
+
+    .defect-input {
+      width: 100%;
+      min-width: 180px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      outline: none;
+      resize: vertical;
+      min-height: 40px;
+    }
+
+    .defect-input:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+
+    .defect-input.has-error {
+      border-color: #f87171;
+      background: #fffafa;
+    }
+
+    /* Print / Responsive */
+    @media print {
+      body { padding: 0; background: white; }
+      header { background: #1e3a8a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .controls-panel, .timer-actions, .btn-timer { display: none !important; }
+      .table-container { box-shadow: none; border: 1px solid #ccc; }
+      th, td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="header-title">
+      <h1>CODS Court - แบบฟอร์มตรวจสอบระบบ & จับเวลา (Manual Test Runner)</h1>
+      <p>ระบบบันทึกผลการทดสอบ ตรวจจับข้อผิดพลาด (Defects) และจับเวลาการทำงานรายฟังก์ชันแบบเรียลไทม์</p>
+    </div>
+    <div class="header-session">
+      <div>
+        <div style="font-size: 11px; opacity: 0.8; margin-bottom: 2px;">ผู้ทดสอบ (Tester)</div>
+        <input type="text" id="testerName" class="session-input" placeholder="พิมพ์ชื่อผู้ทดสอบ..." value="เจ้าหน้าที่ตรวจสอบ">
+      </div>
+      <div>
+        <div style="font-size: 11px; opacity: 0.8; margin-bottom: 2px;">เวอร์ชันโปรแกรม (Build)</div>
+        <input type="text" id="appVersion" class="session-input" style="width: 110px;" value="v1.0.0">
+      </div>
+    </div>
+  </header>
+
+  <!-- Metrics Dashboard -->
+  <div class="metrics-grid">
+    <div class="metric-card total">
+      <div class="metric-title">เคสทั้งหมด (Total Cases)</div>
+      <div class="metric-val" id="valTotal">0</div>
+      <div class="metric-sub" id="valProgress">ทำแล้ว 0 / 0</div>
+    </div>
+    <div class="metric-card passed">
+      <div class="metric-title">ผ่าน (Passed)</div>
+      <div class="metric-val" style="color: var(--success);" id="valPassed">0</div>
+      <div class="metric-sub" id="valPassedRate">0%</div>
+    </div>
+    <div class="metric-card failed">
+      <div class="metric-title">ไม่สำเร็จ / ผิดพลาด (Failed)</div>
+      <div class="metric-val" style="color: var(--danger);" id="valFailed">0</div>
+      <div class="metric-sub" id="valFailedSub">0 Critical / High</div>
+    </div>
+    <div class="metric-card rate">
+      <div class="metric-title">อัตราความสำเร็จ (Pass Rate)</div>
+      <div class="metric-val" style="color: var(--primary-light);" id="valRate">0%</div>
+      <div class="metric-sub">เป้าหมาย: ≥ 95%</div>
+    </div>
+    <div class="metric-card time">
+      <div class="metric-title">เวลารวมที่ใช้ (Total Time)</div>
+      <div class="metric-val" style="color: var(--warning); font-family: monospace;" id="valTotalDuration">00:00:00</div>
+      <div class="metric-sub">เฉลี่ยต่อเคส: <span id="valAvgTime">0s</span></div>
+    </div>
+  </div>
+
+  <!-- Failure Alert Summary Box -->
+  <div id="failureBox" class="failure-summary-box">
+    <div class="failure-summary-header">
+      ตรวจพบข้อผิดพลาดที่ระบบทำงานไม่สำเร็จ (Failed Cases Detected)
+    </div>
+    <ul id="failureList" class="failure-summary-list"></ul>
+  </div>
+
+  <!-- Controls & Action Panel -->
+  <div class="controls-panel">
+    <div class="filter-group">
+      <span style="font-size: 13px; font-weight: 600; color: var(--text-muted); margin-right: 4px;">ตัวกรอง:</span>
+      <button class="filter-btn active" onclick="setFilter('all', this)">ทั้งหมด (<span id="countFilterAll">0</span>)</button>
+      <button class="filter-btn failed" onclick="setFilter('failed', this)">เฉพาะที่ไม่สำเร็จ (<span id="countFilterFailed">0</span>)</button>
+      <button class="filter-btn" onclick="setFilter('pending', this)">รอดำเนินการ (<span id="countFilterPending">0</span>)</button>
+      <button class="filter-btn" onclick="setFilter('passed', this)">ผ่าน (<span id="countFilterPassed">0</span>)</button>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <button class="action-btn btn-outline" onclick="exportToCSV()">ส่งออก Excel (CSV)</button>
+      <button class="action-btn btn-outline" onclick="window.print()">พิมพ์รายงาน / PDF</button>
+      <button class="action-btn btn-primary" onclick="addNewCustomCase()">เพิ่มเคสใหม่</button>
+      <button class="action-btn btn-outline" style="color: var(--danger);" onclick="resetAllData()">รีเซ็ตข้อมูล</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 70px;">รหัส</th>
+          <th style="width: 110px;">หมวดหมู่</th>
+          <th style="min-width: 220px;">ขั้นตอนการทดสอบ (Action / Steps)</th>
+          <th style="min-width: 220px;">ผลลัพธ์ที่คาดหวัง (Expected Result)</th>
+          <th style="width: 140px;">จับเวลา (Stopwatch)</th>
+          <th style="width: 130px;">สถานะผลตรวจ</th>
+          <th style="min-width: 200px;">รายละเอียดที่พบ / สิ่งที่ไม่สำเร็จ (Defect / Notes)</th>
+        </tr>
+      </thead>
+      <tbody id="testTableBody">
+        <!-- Rendered by JavaScript -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Initial Master Test Cases for CODS Court System
+const DEFAULT_TEST_CASES = [
+  {
+    id: "TC-01",
+    category: "ติดตั้ง & Setup",
+    severity: "Critical",
+    action: "เปิดไฟล์ติดตั้ง Inno Setup (.exe) และติดตั้งโปรแกรมบนเครื่องที่ไม่มี Python",
+    expected: "ติดตั้งสำเร็จ มี Shortcut หน้าจอ และเปิดโปรแกรมขึ้นมาหน้าแรกได้สมบูรณ์",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-02",
+    category: "ออฟไลน์",
+    severity: "Critical",
+    action: "ปิด Wi-Fi / ปลดสาย LAN (100% Air-Gapped) แล้วเปิดใช้งานโปรแกรม",
+    expected: "โปรแกรมเปิดทำงานได้ปกติ ไม่มี Error ไม่พยายามเชื่อมต่อเน็ต ไอคอน SVG และฟอนต์แสดงครบ",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-03",
+    category: "นำเข้า Excel",
+    severity: "High",
+    action: "กด Ctrl + O นำเข้าไฟล์ตารางนัดพิจารณา (.xlsx) ที่มี 50-100 คดี",
+    expected: "ประมวลผลอ่านไฟล์เสร็จใน < 1 วินาที หัวตารางและข้อมูลคดีถูกจัดเรียงถูกต้อง",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-04",
+    category: "นำเข้า Excel",
+    severity: "Medium",
+    action: "ทดสอบเลือกไฟล์ที่ไม่ใช่ Excel (เช่น .pdf, .txt หรือไฟล์เสีย) หรือไฟล์เปล่า",
+    expected: "ระบบแสดง Dialog แจ้งเตือนข้อผิดพลาดอย่างสุภาพ ไม่เกิด Application Crash",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-05",
+    category: "ค้นหาคดี",
+    severity: "High",
+    action: "กด Ctrl + F แล้วพิมพ์ค้นหาด้วยเลขดำ (เช่น ผด, ผบ) หรือชื่อคู่ความ",
+    expected: "ตารางกรองผลลัพธ์แบบ Real-time แสดงเฉพาะคดีที่ตรงกัน และเมื่อลบช่องค้นหากลับมาแสดงครบ",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-06",
+    category: "คู่องค์คณะ",
+    severity: "High",
+    action: "เลือกผู้พิพากษาคนที่ 1 ที่เคยจับคู่ไว้ในระบบ",
+    expected: "ชื่อผู้พิพากษาคนที่ 2 (องค์คณะ) เติมอัตโนมัติทันที และกดปุ่ม Ctrl + B เพื่อดู/จัดการคู่ได้",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-07",
+    category: "ผู้มาศาล",
+    severity: "High",
+    action: "เพิ่มบทบาทผู้มาศาล (โจทก์, จำเลย, ทนาย) แล้วทดสอบลากสลับตำแหน่ง (Drag & Drop)",
+    expected: "ลากสลับลำดับได้ลื่นไหล ข้อความพรีวิว 'วันนี้...มาศาล' อัปเดตแบบ Real-time ตามลำดับจริง",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-08",
+    category: "Template",
+    severity: "Medium",
+    action: "กด Ctrl + T เปิดคลัง Template เลือกแทรกข้อความสำเร็จรูป และทดลองบันทึก Template ใหม่",
+    expected: "ข้อความถูกดึงมาใส่ในย่อหน้าได้ถูกต้อง บันทึก Template ใหม่แล้วปิด-เปิดโปรแกรมยังคงอยู่",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-09",
+    category: "ส่งออก Word",
+    severity: "Critical",
+    action: "กด Ctrl + S สั่งสร้างไฟล์รายงานกระบวนพิจารณา (.docx) ตามแบบพิมพ์ ๒๒",
+    expected: "สร้างไฟล์ Word สำเร็จ เปิดด้วย MS Word ได้ ไม่มี Corrupted, ตราครุฑตรง, ตัวแปรแทนที่ครบ 100%",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-10",
+    category: "File Lock",
+    severity: "High",
+    action: "เปิดไฟล์ Word ผลลัพธ์ค้างไว้ใน MS Word แล้วสั่ง Save ทับจากโปรแกรม",
+    expected: "ระบบตรวจจับว่าไฟล์ถูกล็อค แจ้งเตือนให้ปิดไฟล์ก่อน ไม่เกิดโปรแกรมดับกะทันหัน",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  },
+  {
+    id: "TC-11",
+    category: "คีย์ลัด",
+    severity: "Low",
+    action: "กด F1 เพื่อเปิดหน้าต่าง Keyboard Shortcuts Cheat Sheet และทดสอบปุ่ม Ctrl+1, 2, 3",
+    expected: "หน้าต่างช่วยจำคีย์ลัดแสดงขึ้นมา และสามารถสลับหน้า 1, 2, 3 ได้อย่างรวดเร็ว",
+    status: "pending",
+    duration: 0,
+    defect: ""
+  }
+];
+
+// App State
+let testCases = [];
+let currentFilter = 'all';
+let activeTimers = {}; // { index: intervalId }
+
+// Initialize & LocalStorage
+function init() {
+  const saved = localStorage.getItem('cods_manual_tests');
+  if (saved) {
+    try {
+      testCases = JSON.parse(saved);
+    } catch(e) {
+      testCases = JSON.parse(JSON.stringify(DEFAULT_TEST_CASES));
+    }
+  } else {
+    testCases = JSON.parse(JSON.stringify(DEFAULT_TEST_CASES));
+  }
+
+  const savedTester = localStorage.getItem('cods_tester_name');
+  if (savedTester) document.getElementById('testerName').value = savedTester;
+
+  document.getElementById('testerName').addEventListener('input', (e) => {
+    localStorage.setItem('cods_tester_name', e.target.value);
+  });
+
+  render();
+}
+
+function saveData() {
+  localStorage.setItem('cods_manual_tests', JSON.stringify(testCases));
+}
+
+// Format Seconds to MM:SS or HH:MM:SS
+function formatTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// Timer Controls
+function startTimer(index) {
+  if (activeTimers[index]) return;
+
+  const displayEl = document.getElementById(`timer-display-${index}`);
+  if (displayEl) displayEl.classList.add('running');
+
+  activeTimers[index] = setInterval(() => {
+    testCases[index].duration += 1;
+    if (displayEl) displayEl.innerText = formatTime(testCases[index].duration);
+    updateGlobalMetrics();
+    saveData();
+  }, 1000);
+}
+
+function pauseTimer(index) {
+  if (activeTimers[index]) {
+    clearInterval(activeTimers[index]);
+    delete activeTimers[index];
+    const displayEl = document.getElementById(`timer-display-${index}`);
+    if (displayEl) displayEl.classList.remove('running');
+    saveData();
+    updateGlobalMetrics();
+  }
+}
+
+function resetTimer(index) {
+  pauseTimer(index);
+  testCases[index].duration = 0;
+  const displayEl = document.getElementById(`timer-display-${index}`);
+  if (displayEl) displayEl.innerText = "00:00";
+  saveData();
+  updateGlobalMetrics();
+}
+
+// Status Change
+function updateStatus(index, newStatus) {
+  testCases[index].status = newStatus;
+  
+  // Auto stop timer if completed
+  if (newStatus === 'passed' || newStatus === 'failed') {
+    pauseTimer(index);
+  }
+
+  saveData();
+  render();
+}
+
+// Defect Input Change
+function updateDefect(index, text) {
+  testCases[index].defect = text;
+  saveData();
+  updateGlobalMetrics();
+  renderFailureBox();
+}
+
+// Filter Control
+function setFilter(filterType, btn) {
+  currentFilter = filterType;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTableOnly();
+}
+
+// Render Failure Box
+function renderFailureBox() {
+  const failureBox = document.getElementById('failureBox');
+  const failureList = document.getElementById('failureList');
+  const failedCases = testCases.filter(t => t.status === 'failed');
+
+  if (failedCases.length === 0) {
+    failureBox.classList.remove('visible');
+    failureList.innerHTML = '';
+  } else {
+    failureBox.classList.add('visible');
+    failureList.innerHTML = failedCases.map(t => `
+      <li style="margin-bottom: 4px;">
+        <strong>[${t.id}] ${t.category} (${t.severity}):</strong> ${t.action}
+        <br><span style="color: #4b5563;">ปัญหาที่พบ: ${t.defect ? t.defect : '<span style="color:#b91c1c;">(ยังไม่ได้ระบุรายละเอียดข้อผิดพลาด)</span>'}</span>
+        <span style="color: #6b7280; font-size: 12px; margin-left: 8px;">ใช้เวลา: ${formatTime(t.duration)}</span>
+      </li>
+    `).join('');
+  }
+}
+
+// Update Dashboard Numbers
+function updateGlobalMetrics() {
+  const total = testCases.length;
+  const passed = testCases.filter(t => t.status === 'passed').length;
+  const failed = testCases.filter(t => t.status === 'failed').length;
+  const pending = testCases.filter(t => t.status === 'pending').length;
+  const executed = total - pending;
+
+  const passRate = executed > 0 ? Math.round((passed / executed) * 100) : 0;
+  const totalSeconds = testCases.reduce((sum, t) => sum + (t.duration || 0), 0);
+  const avgSeconds = executed > 0 ? Math.round(totalSeconds / executed) : 0;
+
+  document.getElementById('valTotal').innerText = total;
+  document.getElementById('valProgress').innerText = `ตรวจแล้ว ${executed} / ${total} เคส`;
+  document.getElementById('valPassed').innerText = passed;
+  document.getElementById('valPassedRate').innerText = `${passRate}% ของที่ตรวจแล้ว`;
+  document.getElementById('valFailed').innerText = failed;
+  
+  const critFailed = testCases.filter(t => t.status === 'failed' && (t.severity === 'Critical' || t.severity === 'High')).length;
+  document.getElementById('valFailedSub').innerText = `${critFailed} รายการสำคัญ (Critical/High)`;
+  
+  document.getElementById('valRate').innerText = `${passRate}%`;
+  document.getElementById('valTotalDuration').innerText = formatTime(totalSeconds);
+  document.getElementById('valAvgTime').innerText = `${avgSeconds} วินาที`;
+
+  // Filter Counts
+  document.getElementById('countFilterAll').innerText = total;
+  document.getElementById('countFilterFailed').innerText = failed;
+  document.getElementById('countFilterPending').innerText = pending;
+  document.getElementById('countFilterPassed').innerText = passed;
+
+  renderFailureBox();
+}
+
+// Render Table Rows
+function renderTableOnly() {
+  const tbody = document.getElementById('testTableBody');
+  tbody.innerHTML = '';
+
+  testCases.forEach((t, index) => {
+    // Check filter
+    if (currentFilter === 'failed' && t.status !== 'failed') return;
+    if (currentFilter === 'passed' && t.status !== 'passed') return;
+    if (currentFilter === 'pending' && t.status !== 'pending') return;
+
+    const row = document.createElement('tr');
+    if (t.status === 'failed') row.classList.add('failed-row');
+
+    const severityClass = `badge-${t.severity.toLowerCase()}`;
+    const statusClass = t.status;
+
+    row.innerHTML = `
+      <td>
+        <strong>${t.id}</strong><br>
+        <span class="badge ${severityClass}">${t.severity}</span>
+      </td>
+      <td>
+        <span style="font-weight: 500;">${t.category}</span>
+      </td>
+      <td>
+        <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${t.action}</div>
+      </td>
+      <td>
+        <div style="color: #475569;">${t.expected}</div>
+      </td>
+      <td>
+        <div class="timer-widget">
+          <div id="timer-display-${index}" class="timer-display ${activeTimers[index] ? 'running' : ''}">
+            ${formatTime(t.duration)}
+          </div>
+          <div class="timer-actions">
+            <button class="btn-timer start" title="เริ่มจับเวลา" onclick="startTimer(${index})">เริ่ม</button>
+            <button class="btn-timer pause" title="หยุดชั่วคราว" onclick="pauseTimer(${index})">พัก</button>
+            <button class="btn-timer reset" title="รีเซ็ตเวลา" onclick="resetTimer(${index})">รีเซ็ต</button>
+          </div>
+        </div>
+      </td>
+      <td>
+        <select class="status-select ${statusClass}" onchange="updateStatus(${index}, this.value)">
+          <option value="pending" ${t.status === 'pending' ? 'selected' : ''}>รอดำเนินการ</option>
+          <option value="passed" ${t.status === 'passed' ? 'selected' : ''}>ผ่าน (Pass)</option>
+          <option value="failed" ${t.status === 'failed' ? 'selected' : ''}>ไม่สำเร็จ (Fail)</option>
+          <option value="blocked" ${t.status === 'blocked' ? 'selected' : ''}>ติดปัญหา (Block)</option>
+        </select>
+      </td>
+      <td>
+        <textarea 
+          class="defect-input ${t.status === 'failed' ? 'has-error' : ''}" 
+          placeholder="${t.status === 'failed' ? 'ระบุสิ่งที่ผิดพลาด/ทำไม่สำเร็จที่นี่...' : 'บันทึกหมายเหตุเพิ่มเติม...'}"
+          onchange="updateDefect(${index}, this.value)">${t.defect || ''}</textarea>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function render() {
+  updateGlobalMetrics();
+  renderTableOnly();
+}
+
+// Add New Custom Test Case
+function addNewCustomCase() {
+  const customAction = prompt("ระบุขั้นตอนการทดสอบ (Test Action / Steps):");
+  if (!customAction) return;
+  
+  const customExpected = prompt("ระบุผลลัพธ์ที่คาดหวัง (Expected Result):") || "ทำงานถูกต้องตามข้อกำหนด";
+  const nextId = `TC-${String(testCases.length + 1).padStart(2, '0')}`;
+
+  testCases.push({
+    id: nextId,
+    category: "ฟังก์ชันเพิ่มเติม",
+    severity: "Medium",
+    action: customAction,
+    expected: customExpected,
+    status: "pending",
+    duration: 0,
+    defect: ""
+  });
+
+  saveData();
+  render();
+}
+
+// Reset Data
+function resetAllData() {
+  if (confirm("คุณแน่ใจหรือไม่ว่าต้องการรีเซ็ตผลการทดสอบและเวลาทั้งหมดกลับเป็นค่าเริ่มต้น?")) {
+    Object.keys(activeTimers).forEach(idx => clearInterval(activeTimers[idx]));
+    activeTimers = {};
+    testCases = JSON.parse(JSON.stringify(DEFAULT_TEST_CASES));
+    saveData();
+    render();
+  }
+}
+
+// Export to CSV
+function exportToCSV() {
+  const tester = document.getElementById('testerName').value || 'Tester';
+  let csv = '\uFEFF'; // UTF-8 BOM for Excel
+  csv += 'รหัส,หมวดหมู่,ความสำคัญ,ขั้นตอนการทดสอบ,ผลลัพธ์ที่คาดหวัง,เวลาที่ใช้ (วินาที),เวลาที่ใช้ (รูปแบบ),สถานะผลตรวจ,รายละเอียดปัญหาที่พบ,ผู้ทดสอบ\n';
+
+  testCases.forEach(t => {
+    const cleanAction = `"${(t.action || '').replace(/"/g, '""')}"`;
+    const cleanExpected = `"${(t.expected || '').replace(/"/g, '""')}"`;
+    const cleanDefect = `"${(t.defect || '').replace(/"/g, '""')}"`;
+    csv += `${t.id},${t.category},${t.severity},${cleanAction},${cleanExpected},${t.duration},${formatTime(t.duration)},${t.status},${cleanDefect},"${tester}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `CODS_Manual_Test_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Run init on load
+window.onload = init;
+</script>
+
+</body>
+</html>

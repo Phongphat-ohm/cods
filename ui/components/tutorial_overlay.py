@@ -94,7 +94,8 @@ class TutorialOverlay(QWidget):
         header_layout.addWidget(self.step_badge)
         header_layout.addStretch()
 
-        self.btn_close = QPushButton("✕", self.card)
+        self.btn_close = QPushButton("", self.card)
+        self.btn_close.setIcon(icon_service.get_icon("x", color="#64748b", size=14))
         self.btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_close.setFixedSize(24, 24)
         self.btn_close.setToolTip("ปิดคำแนะนำ (Esc)")

@@ -7,7 +7,7 @@ Assists court officers and clerks in operating the application rapidly via keybo
 
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton
 from PySide6.QtCore import Qt, Signal
-from icon_service import get_icon
+from services.icon_service import get_icon
 
 
 class ShortcutBadge(QFrame):

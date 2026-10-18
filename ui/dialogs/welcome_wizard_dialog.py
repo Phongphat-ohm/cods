@@ -105,6 +105,7 @@ class WelcomeWizardDialog(QDialog):
         bottom_bar.addWidget(self.btn_skip)
 
         self.btn_back = QPushButton("ย้อนกลับ", self)
+        self.btn_back.setIcon(icon_service.get_icon("arrow-left", color="#475569", size=15))
         self.btn_back.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_back.setFixedHeight(36)
         self.btn_back.setStyleSheet("""
@@ -125,7 +126,8 @@ class WelcomeWizardDialog(QDialog):
         self.btn_back.setEnabled(False)
         bottom_bar.addWidget(self.btn_back)
 
-        self.btn_next = QPushButton("ถัดไป →", self)
+        self.btn_next = QPushButton("ถัดไป", self)
+        self.btn_next.setIcon(icon_service.get_icon("arrow-right", color="#ffffff", size=15))
         self.btn_next.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_next.setFixedHeight(36)
         self.btn_next.setStyleSheet("""
@@ -184,7 +186,7 @@ class WelcomeWizardDialog(QDialog):
         features = [
             ("zap", "ออกรายงานกระบวนพิจารณา & คำพิพากษาตามยอม ได้ในคลิกเดียว"),
             ("scale", "ระบบจำคู่องค์คณะผู้พิพากษาอัตโนมัติ ไม่ต้องกรอกชื่อซ้ำ"),
-            ("file-text", "คลังแม่แบบย่อหน้า รองรับตัวแปร {{ชื่อตัวแปร}} สแกนสร้างช่องกรอกสด"),
+            ("file-text", "คลังแม่แบบย่อหน้า รองรับชิปตัวแปร [ชื่อตัวแปร] สแกนสร้างช่องกรอกสดอัตโนมัติ"),
             ("users", "จัดการผู้มาศาล พร้อมปุ่มจัดลำดับตามแบบพิธีการศาลไทยอัตโนมัติ")
         ]
 
@@ -286,13 +288,13 @@ class WelcomeWizardDialog(QDialog):
         layout.addWidget(lbl_desc)
 
         tools = [
-            ("📝", "คลัง Template ย่อหน้า (Ctrl+T)", "จัดเก็บแบบข้อความกระบวนพิจารณาที่ท่านสร้างขึ้นเอง กำหนดตัวแปร {{ชื่อตัวแปร}} เพื่อให้ระบบสร้างช่องกรอกสด"),
-            ("⚖️", "คู่องค์คณะผู้พิพากษา (Ctrl+B)", "จับคู่ผู้พิพากษาเจ้าของสำนวนและองค์คณะ เมื่อเลือกผู้พิพากษาคนที่ 1 ระบบจะเติมองค์คณะคนที่ 2 ให้อัตโนมัติ"),
-            ("👥", "จัดการบทบาทผู้มาศาล (Quick-Add)", "กำหนดปุ่มลัดเลือกบทบาทผู้มาศาล เช่น โจทก์, จำเลย, ทนายความ เพื่อคลิกเลือกชื่อได้อย่างรวดเร็วในหน้าทำเอกสาร"),
-            ("🏛️", "ตั้งค่าชื่อศาลเริ่มต้น", "กำหนดชื่อศาลประจำเครื่องที่จะแสดงบนหัวรายงานกระบวนพิจารณาและเอกสารทุกฉบับ ไม่ต้องพิมพ์ซ้ำ")
+            ("file-text", "คลัง Template ย่อหน้า (Ctrl+T)", "จัดเก็บแบบข้อความกระบวนพิจารณาที่ท่านสร้างขึ้นเอง กำหนดชิปตัวแปร [ชื่อตัวแปร] เพื่อให้ระบบสร้างช่องกรอกสดอัตโนมัติ"),
+            ("scale", "คู่องค์คณะผู้พิพากษา (Ctrl+B)", "จับคู่ผู้พิพากษาเจ้าของสำนวนและองค์คณะ เมื่อเลือกผู้พิพากษาคนที่ 1 ระบบจะเติมองค์คณะคนที่ 2 ให้อัตโนมัติ"),
+            ("users", "จัดการบทบาทผู้มาศาล (Quick-Add)", "กำหนดปุ่มลัดเลือกบทบาทผู้มาศาล เช่น โจทก์, จำเลย, ทนายความ เพื่อคลิกเลือกชื่อได้อย่างรวดเร็วในหน้าทำเอกสาร"),
+            ("settings", "ตั้งค่าข้อมูลพื้นฐาน", "กำหนดชื่อศาลและระบบการประชุมออนไลน์ประจำเครื่องที่จะแสดงบนแบบฟอร์มเอกสารให้อัตโนมัติ ไม่ต้องพิมพ์ซ้ำ")
         ]
 
-        for icon, title, desc in tools:
+        for icon_key, title, desc in tools:
             tool_box = QFrame(page)
             tool_box.setStyleSheet("""
                 QFrame {
@@ -305,8 +307,8 @@ class WelcomeWizardDialog(QDialog):
             t_layout.setContentsMargins(12, 8, 12, 8)
             t_layout.setSpacing(12)
 
-            ico_lbl = QLabel(icon, tool_box)
-            ico_lbl.setStyleSheet("font-size: 18px;")
+            ico_lbl = QLabel(tool_box)
+            ico_lbl.setPixmap(icon_service.get_pixmap(icon_key, color="#4c1d95", size=20))
             t_layout.addWidget(ico_lbl)
 
             info_vbox = QVBoxLayout()
@@ -413,7 +415,8 @@ class WelcomeWizardDialog(QDialog):
         self.lbl_dots.setText(f"{dots[0]}  {dots[1]}  {dots[2]}  {dots[3]}")
 
         if idx == self.stack.count() - 1:
-            self.btn_next.setText("เริ่มต้นใช้งาน CODS  ✓")
+            self.btn_next.setText("เริ่มต้นใช้งาน CODS")
+            self.btn_next.setIcon(icon_service.get_icon("check", color="#ffffff", size=15))
             self.btn_next.setStyleSheet("""
                 QPushButton {
                     background-color: #16a34a;
@@ -430,7 +433,8 @@ class WelcomeWizardDialog(QDialog):
             """)
             self.txt_court.setFocus()
         else:
-            self.btn_next.setText("ถัดไป →")
+            self.btn_next.setText("ถัดไป")
+            self.btn_next.setIcon(icon_service.get_icon("arrow-right", color="#ffffff", size=15))
             self.btn_next.setStyleSheet("""
                 QPushButton {
                     background-color: #7e22ce;
